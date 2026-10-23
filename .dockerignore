@@ -1,0 +1,10 @@
+.git
+.venv
+**/node_modules
+**/dist
+.env
+artifacts
+docs/reports/*campaigns*
+**/__pycache__
+.hypothesis
+.pytest_cache

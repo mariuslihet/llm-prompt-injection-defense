@@ -44,13 +44,18 @@ class LocalClassifier:
     """Optional Hugging Face text classifier, isolated from the fast path."""
 
     def __init__(self, path: str) -> None:
-        from transformers import pipeline  # type: ignore[import-not-found]
+        from pathlib import Path
+
+        if not Path(path).is_dir():
+            raise ValueError("classifier requires an explicit local artifact directory")
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
         self._pipeline = pipeline(
             "text-classification",
-            model=path,
-            tokenizer=path,
-            model_kwargs={"local_files_only": True},
+            model=AutoModelForSequenceClassification.from_pretrained(
+                path, local_files_only=True, trust_remote_code=False),
+            tokenizer=AutoTokenizer.from_pretrained(
+                path, local_files_only=True, trust_remote_code=False),
             device=-1,
         )
 

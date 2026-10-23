@@ -1,0 +1,13 @@
+image:
+  repository: mecha
+  tag: "0.1.0"
+  digest: ""
+tenantSecret: mecha-tenants
+storageClassName: ""
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi

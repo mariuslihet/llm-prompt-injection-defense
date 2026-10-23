@@ -19,7 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from packages.core import Segment
-from packages.detectors import detect
+from packages.detectors import LocalClassifier
+from packages.detectors.cascade import Cascade, CascadeConfig, ProviderJudge
 from packages.gateway.providers import MockProvider, Provider, RealProvider
 from packages.ifc import Interpreter, Program, trusted_value, untrusted_value
 from packages.policy import Approvals, binding, compile_policy, verify
@@ -127,6 +128,7 @@ def create_app(
     rate_limit: int = 60,
     request_hook: Callable[[str], str] | None = None,
     response_hook: Callable[[str], str] | None = None,
+    cascade: Cascade | None = None,
 ) -> FastAPI:
     api = FastAPI(title="Mecha", version="0.1.0")
     api.add_middleware(BodyLimit)
@@ -148,6 +150,18 @@ def create_app(
     if verify(policy):
         raise ValueError("unsafe gateway policy")
     approvals = Approvals()
+    detector = cascade or Cascade(
+        CascadeConfig(
+            mode=os.getenv("MECHA_DETECTOR_MODE", "block"),
+            threshold=float(os.getenv("MECHA_DETECTOR_THRESHOLD", "0.6")),
+        ),
+        classifier=LocalClassifier(os.environ["MECHA_CLASSIFIER_PATH"])
+        if os.getenv("MECHA_CLASSIFIER_PATH")
+        else None,
+        judge=ProviderJudge(model_provider, os.environ["MECHA_JUDGE_MODEL"])
+        if os.getenv("MECHA_JUDGE_MODEL")
+        else None,
+    )
     store = PolicyStore(DEFAULT_POLICY.read_text(encoding="utf-8"))
     from lab.arena import Arena
 
@@ -201,7 +215,17 @@ def create_app(
         messages = []
         for message in body.messages:
             text = request_hook(message.content) if request_hook else message.content
-            detection = detect(text)
+            detection = await detector.inspect(text)
+            if detection.action in {"flag", "shadow"}:
+                ledger.append(
+                    tenant,
+                    {
+                        "action": detection.action,
+                        "rule": "detector-cascade",
+                        "reason": ",".join(detection.reasons),
+                        "request_id": request_id,
+                    },
+                )
             if detection.action == "block":
                 ledger.append(
                     tenant,

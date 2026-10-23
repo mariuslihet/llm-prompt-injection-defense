@@ -1,0 +1,27 @@
+{
+  "experiment": "bert-tiny-calibrated-fixture-detector",
+  "seed": 42,
+  "data_sha256": "6ea2e75e927c7cb743aac620986d972f470f828defef8bd8a91f02f26d036824",
+  "model_sha256": "1828b0f19bea6044c1936c1c43045a4e93017ca0f0d7733a778c60fe8884a5ce",
+  "calibration": {
+    "threshold": 0.1809815774427185,
+    "fpr": 0.0,
+    "tpr": 1.0
+  },
+  "test_attack_n": 56,
+  "static_misses": 0,
+  "static_evasion_rate": 0.0,
+  "test_benign_n": 186,
+  "benign_fp": 2,
+  "benign_fpr": 0.010752688172043012,
+  "adaptive_trials": 56,
+  "adaptive_successes": 0,
+  "adaptive_evasion_rate": 0.0,
+  "attack_budget": 7,
+  "limits": "Synthetic templates; classification-evasion oracle, not real LLM agent ASR.",
+  "targets_available": [
+    "email-calendar",
+    "rag",
+    "web-research"
+  ]
+}

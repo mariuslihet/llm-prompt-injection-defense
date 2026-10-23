@@ -1,0 +1,62 @@
+{
+  "experiment": "synthetic-naive-bayes-selfplay",
+  "seed": 42,
+  "rounds": [
+    {
+      "round": 0,
+      "training_evasion_rate": 0.2857142857142857,
+      "heldout_evasion_rate": 1.0,
+      "benign_fpr": 0.0,
+      "overfit_gap": 0.7142857142857143
+    },
+    {
+      "round": 1,
+      "training_evasion_rate": 0.0,
+      "heldout_evasion_rate": 1.0,
+      "benign_fpr": 0.0,
+      "overfit_gap": 1.0
+    },
+    {
+      "round": 2,
+      "training_evasion_rate": 0.0,
+      "heldout_evasion_rate": 1.0,
+      "benign_fpr": 0.0,
+      "overfit_gap": 1.0
+    },
+    {
+      "round": 3,
+      "training_evasion_rate": 0.0,
+      "heldout_evasion_rate": 1.0,
+      "benign_fpr": 0.0,
+      "overfit_gap": 1.0
+    }
+  ],
+  "train_categories": [
+    "direct-override",
+    "indirect-email",
+    "indirect-web",
+    "indirect-pdf",
+    "indirect-rag",
+    "indirect-tool-output",
+    "exfil-markdown-image",
+    "exfil-link",
+    "exfil-tool-call",
+    "exfil-email",
+    "tool-abuse",
+    "system-prompt-leak",
+    "memory-poisoning",
+    "multi-turn"
+  ],
+  "heldout_categories": [
+    "evasion-base64",
+    "evasion-leetspeak",
+    "evasion-multilingual",
+    "evasion-split",
+    "evasion-unicode",
+    "evasion-html-css",
+    "mcp-description-poisoning"
+  ],
+  "heldout_operator": "json-escape-split",
+  "model": "multinomial NB; not pretrained",
+  "limitation": "Fixture grammar and templated benign tasks; not real-model robustness."
+}

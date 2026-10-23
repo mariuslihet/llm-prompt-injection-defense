@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-research = ["torch==2.7.0", "transformers==4.51.3", "peft==0.15.2", "trl==0.17.0"]
+research = ["torch==2.14.1", "transformers==5.20.2", "peft==0.21.2", "trl==1.16.0", "datasets==5.1.0"]
 telemetry = ["opentelemetry-sdk==1.45.1", "opentelemetry-exporter-otlp-proto-http==1.45.1"]
 postgres = ["psycopg[binary]==3.2.9"]
 
@@ -52,6 +52,11 @@ ignore = ["S101"]
 python_version = "3.11"
 strict = true
 files = ["packages/core", "packages/policy", "packages/ifc", "packages/sanitizers"]
+
+[[tool.mypy.overrides]]
+module = ["transformers", "transformers.*", "torch", "torch.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["packages.core", "packages.policy", "packages.ifc", "packages.sanitizers"]

@@ -1,0 +1,29 @@
+services:
+  gateway:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    ports: ["127.0.0.1:8000:8000"]
+    env_file: ../../.env
+    environment:
+      MECHA_AUDIT_PATH: /data/audit.sqlite
+      MECHA_PROVIDER: mock
+    volumes: ["mecha-data:/data"]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 100
+    mem_limit: 512m
+    cpus: 1
+    networks: [isolated]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+networks:
+  isolated:
+    internal: true
+volumes:
+  mecha-data:
