@@ -1,0 +1,9 @@
+{
+  "requests": 1000,
+  "concurrency": 32,
+  "transport": "in-process ASGI, no sockets",
+  "provider": "mock",
+  "p50_ms": 1.1435,
+  "p95_ms": 1.3046,
+  "note": "Total fast-path request duration; excludes network, TLS and real inference."
+}
