@@ -1,0 +1,18 @@
+version: "1"
+mode: enforce
+rules:
+  - tool: send_email
+    arguments: [recipient, body]
+    external: true
+    trusted_arguments: [recipient]
+    approval_after_untrusted: true
+  - tool: fetch_url
+    arguments: [url]
+    external: true
+    trusted_arguments: [url]
+    url_arguments: [url]
+    allowed_hosts: [docs.example.invalid]
+    approval_after_untrusted: true
+  - tool: summarize
+    arguments: [text]
+    external: false

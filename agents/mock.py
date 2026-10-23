@@ -29,8 +29,9 @@ class Result:
 
 def normalized(text: str) -> str:
     """Normalize the encodings deliberately supported by the fixture follower."""
-    text = "".join(c for c in unicodedata.normalize("NFKC", text)
-                   if unicodedata.category(c) != "Cf")
+    text = "".join(
+        c for c in unicodedata.normalize("NFKC", text) if unicodedata.category(c) != "Cf"
+    )
     for token in re.findall(r"B64\[([A-Za-z0-9+/=]+)\]", text):
         try:
             text += "\n" + base64.b64decode(token, validate=True).decode("utf-8")
