@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mecha-security"
+version = "0.1.0"
+description = "Offline-first prompt injection defense research platform"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.115.12", "uvicorn==0.34.2", "pydantic==2.11.4",
+  "httpx==0.28.1", "PyYAML==6.0.2",
+]
+
+[project.optional-dependencies]
+research = ["torch==2.7.0", "transformers==4.51.3", "peft==0.15.2", "trl==0.17.0"]
+telemetry = ["opentelemetry-sdk==1.33.1", "opentelemetry-exporter-otlp-proto-http==1.33.1"]
+postgres = ["psycopg[binary]==3.2.9"]
+
+[dependency-groups]
+dev = ["pytest==8.3.5", "hypothesis==6.131.9", "pytest-cov==6.1.1", "ruff==0.11.9", "mypy==1.15.0", "types-PyYAML==6.0.12.20250516", "pre-commit==4.2.0", "pip-audit==2.9.0"]
+
+[project.scripts]
+mecha = "packages.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["packages*", "lab*", "agents*", "eval*", "training*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]
+"lab/*" = ["S311"]
+"eval/*" = ["S311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["packages/core", "packages/policy", "packages/ifc", "packages/sanitizers"]
+
+[tool.coverage.run]
+source = ["packages.core", "packages.policy", "packages.ifc", "packages.sanitizers"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

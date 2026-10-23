@@ -1,0 +1,1 @@
+"""Mecha defense components."""
