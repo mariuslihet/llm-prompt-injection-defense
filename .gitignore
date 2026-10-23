@@ -12,5 +12,8 @@ htmlcov/
 *.sqlite*
 node_modules/
 dist/
+build/
 artifacts/
 !artifacts/.gitkeep
+docs/reports/*-campaigns.jsonl
+coverage.xml

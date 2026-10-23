@@ -1,0 +1,58 @@
+name: Offline security contracts
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.5'
+          python-version: '3.11'
+      - run: uv sync --frozen
+      - run: uv run ruff check . && uv run ruff format --check . && uv run mypy
+      - run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
+      - run: uv run mecha verify-policy packages/policy/default.yaml
+      - run: uv run mecha evaluate --seed 42 --budget 8 --output artifacts/ci
+      - run: uv run mecha gate artifacts/ci.json
+      - run: uv run mecha load-test --output artifacts/load.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-evidence
+          path: |
+            artifacts/
+            coverage.xml
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.5'
+          python-version: '3.11'
+      - run: uv sync --frozen
+      - run: uv run pip-audit --skip-editable
+      - run: uv run pip-audit --skip-editable -f cyclonedx-json -o sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: dashboard
