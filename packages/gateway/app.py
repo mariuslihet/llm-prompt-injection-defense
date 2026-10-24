@@ -332,20 +332,26 @@ def create_app(
     @api.get("/lab/config")
     async def lab_config(auth: Auth):
         require(auth, {"viewer", "operator", "admin"})
-        from agents.email import ATTACK_EMAIL, BENIGN_EMAIL, DEFENSES, TASK
-        from agents.scenarios import SCENARIOS, STRATEGIES
+        from agents.email import DEFENSES
+        from agents.scenarios import SCENARIOS, STRATEGIES, attack_input
 
         return {
             "enabled": lab_provider is not None,
             "provider": type(lab_provider).__name__ if lab_provider else "disabled",
             "model": lab_model,
             "defenses": DEFENSES,
-            "task": TASK,
-            "attack_email": ATTACK_EMAIL,
-            "benign_email": BENIGN_EMAIL,
+            "task": SCENARIOS["invoice"].task,
+            "attack_email": attack_input(SCENARIOS["invoice"], "authority"),
+            "benign_email": SCENARIOS["invoice"].email,
             "scenarios": [
-                {"id": s.id, "name": s.name, "task": s.task, "email": s.email}
-                for s in SCENARIOS.values()
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "task": s.task,
+                    "email": s.email,
+                    "attacks": {key: attack_input(s, key) for key in STRATEGIES},
+                }
+                for s in sorted(SCENARIOS.values(), key=lambda s: s.kind == "meeting")
             ],
             "strategies": STRATEGIES,
             "tools": "Incoming email, confidential sample memo, simulated email ledger",
@@ -394,6 +400,17 @@ def create_app(
     @api.get("/lab/jobs")
     async def list_jobs(auth: Auth):
         return {"jobs": jobs.list(auth[0])}
+
+    @api.get("/lab/jobs/{identity}/compare/{baseline}")
+    async def compare_jobs(identity: str, baseline: str, auth: Auth):
+        from lab.comparison import compare
+
+        try:
+            return compare(jobs.get(auth[0], identity), jobs.get(auth[0], baseline))
+        except KeyError as exc:
+            raise HTTPException(404, "run not found") from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @api.get("/lab/jobs/{identity}")
     async def get_job(identity: str, auth: Auth):

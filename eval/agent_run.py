@@ -7,7 +7,8 @@ import html
 import json
 from pathlib import Path
 
-from agents.email import ATTACK_EMAIL, DEFENSES
+from agents.email import DEFENSES
+from agents.scenarios import SCENARIOS, attack_input
 from lab.campaigns import RunSpec, execute
 from packages.gateway.providers import LocalHFProvider, configured_provider
 from packages.policy import compile_policy
@@ -20,10 +21,12 @@ async def run(args) -> dict[str, object]:
         else configured_provider(args.provider)
     )
     spec = RunSpec(
-        kind="campaign" if args.campaign else "agent",
+        kind="suite" if args.suite else "campaign" if args.campaign else "agent",
         defense=args.defense,
-        adaptive_rounds=args.adaptive_rounds,
-        email=args.email.read_text(encoding="utf-8") if args.email else ATTACK_EMAIL,
+        adaptive_rounds=0 if args.suite else args.adaptive_rounds,
+        email=args.email.read_text(encoding="utf-8")
+        if args.email
+        else attack_input(SCENARIOS[args.scenario], "authority"),
         scenario_id=args.scenario,
         max_turns=args.max_turns,
     )
@@ -72,10 +75,14 @@ if __name__ == "__main__":
     parser.add_argument("--model-path", type=Path)
     parser.add_argument("--model", default="operator-selected-local-model")
     parser.add_argument("--defense", choices=DEFENSES, default="full-ifc")
-    parser.add_argument("--campaign", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--campaign", action="store_true")
+    mode.add_argument("--suite", action="store_true")
     parser.add_argument("--adaptive-rounds", type=int, choices=range(4), default=1)
     parser.add_argument(
-        "--scenario", choices=("launch", "rescheduled", "multilingual"), default="launch"
+        "--scenario",
+        choices=("launch", "rescheduled", "multilingual", "invoice", "support", "access"),
+        default="invoice",
     )
     parser.add_argument("--max-turns", type=int, choices=range(1, 9), default=6)
     parser.add_argument("--email", type=Path)
