@@ -10,6 +10,8 @@ class PolicyStore:
     def __init__(self, default_text: str, path: str = ":memory:") -> None:
         self.default_text = default_text
         self.db = sqlite3.connect(path, check_same_thread=False)
+        if path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
         self.lock = threading.Lock()
         self.db.executescript("""
           CREATE TABLE IF NOT EXISTS policies (

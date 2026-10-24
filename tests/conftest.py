@@ -1,9 +1,25 @@
 """Tests must not accidentally call a model, DNS, or other network service."""
 
+import os
 import socket
 import threading
 
 import pytest
+
+
+def pytest_configure():
+    """Collect and execute tests independently of the operator's provider config."""
+    os.environ.update(MECHA_AGENT_PROVIDER="disabled", MECHA_ENV="test")
+    os.environ.update(
+        MECHA_PROVIDER="mock", MECHA_STATE_PATH=":memory:", MECHA_AUDIT_PATH=":memory:"
+    )
+    for name in (
+        "MECHA_CLASSIFIER_PATH",
+        "MECHA_JUDGE_MODEL",
+        "MECHA_OTEL_ENDPOINT",
+        "MECHA_ALLOW_NETWORK",
+    ):
+        os.environ.pop(name, None)
 
 
 @pytest.fixture

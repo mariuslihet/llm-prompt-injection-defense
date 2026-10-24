@@ -1,7 +1,9 @@
 """Mock-first gateway. Run on loopback; explicit credentials required to serve requests."""
 
+import asyncio
 import json
 import os
+import re
 import sqlite3
 import time
 import uuid
@@ -11,6 +13,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import yaml
+from anyio import to_thread
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,7 +22,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from packages.core import Segment
 from packages.detectors import LocalClassifier
 from packages.detectors.cascade import Cascade, CascadeConfig, ProviderJudge
-from packages.gateway.providers import MockProvider, Provider, RealProvider
+from packages.gateway.providers import Provider, configured_provider
 from packages.ifc import Interpreter, Program, plan, trusted_value, untrusted_value
 from packages.policy import binding, compile_policy, verify
 from packages.policy.store import PolicyStore
@@ -30,17 +33,68 @@ from packages.telemetry import Audit
 DEFAULT_POLICY = Path(__file__).parents[1] / "policy" / "default.yaml"
 
 
-class BodyLimit:
+class ServerTiming:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        started = time.perf_counter()
+
+        async def timed_send(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                duration = (time.perf_counter() - started) * 1000
+                headers.append((b"server-timing", f"mecha;dur={duration:.3f}".encode()))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, timed_send)
+
+
+class SecurityHeaders:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"].startswith("/api/"):
+            scope = {**scope, "path": scope["path"][4:], "raw_path": scope["raw_path"][4:]}
+
+        async def secure_send(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend(
+                    [
+                        (b"x-content-type-options", b"nosniff"),
+                        (b"referrer-policy", b"no-referrer"),
+                        (b"cache-control", b"no-store"),
+                        (b"content-security-policy", b"frame-ancestors 'none'"),
+                    ]
+                )
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, secure_send)
+
+
+class BodyLimit:
+    def __init__(self, app: ASGIApp, timeout_seconds: float = 10) -> None:
+        self.app = app
+        self.timeout_seconds = timeout_seconds
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
         body = bytearray()
+        deadline = time.monotonic() + self.timeout_seconds
         while True:
-            message = await receive()
+            try:
+                message = await asyncio.wait_for(receive(), max(0, deadline - time.monotonic()))
+            except TimeoutError:
+                await JSONResponse({"detail": "request body timeout"}, status_code=408)(
+                    scope, receive, send
+                )
+                return
             if message["type"] == "http.disconnect":
                 return
             body.extend(message.get("body", b""))
@@ -136,12 +190,16 @@ def create_app(
     response_hook: Callable[[str], str] | None = None,
     cascade: Cascade | None = None,
     state_path: str | None = None,
+    agent_provider: Provider | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
             yield
         finally:
+            await jobs.close()
+            if worker_lock:
+                worker_lock.close()
             if audit is None:
                 ledger.close()
             state.close()
@@ -150,6 +208,14 @@ def create_app(
 
     api = FastAPI(title="Mecha", version="0.1.0", lifespan=lifespan)
     api.add_middleware(BodyLimit)
+    api.add_middleware(ServerTiming)
+    api.add_middleware(SecurityHeaders)
+    if os.getenv("MECHA_OTEL_ENDPOINT"):
+        if os.getenv("MECHA_ALLOW_TELEMETRY") != "1":
+            raise ValueError("telemetry export requires explicit opt-in")
+        from packages.telemetry.otel import configure
+
+        configure(os.environ["MECHA_OTEL_ENDPOINT"])
     configured = (
         tenants
         if tenants is not None
@@ -158,16 +224,31 @@ def create_app(
             for k, v in json.loads(os.getenv("MECHA_TENANT_KEYS", "{}")).items()
         }
     )
-    model_provider = provider or (
-        MockProvider()
-        if os.getenv("MECHA_PROVIDER", "mock") == "mock"
-        else RealProvider(os.environ["MECHA_PROVIDER"])
-    )
+    model_provider = provider or configured_provider(os.getenv("MECHA_PROVIDER", "mock"))
     ledger = audit or Audit(os.getenv("MECHA_AUDIT_PATH", ":memory:"))
     policy = compile_policy(DEFAULT_POLICY.read_text(encoding="utf-8"))
     if verify(policy):
         raise ValueError("unsafe gateway policy")
     database = state_path if state_path is not None else os.getenv("MECHA_STATE_PATH", ":memory:")
+    worker_lock = None
+    if os.getenv("MECHA_ENV") == "production":
+        if database == ":memory:" or os.getenv("MECHA_AUDIT_PATH", ":memory:") == ":memory:":
+            raise ValueError("production requires durable audit and control storage")
+        if not configured or any(
+            len(t.key) < 32 or "fake" in t.key.lower() for t in configured.values()
+        ):
+            raise ValueError(
+                "production requires non-demo tenant credentials of at least 32 characters"
+            )
+        hosts = os.getenv("MECHA_ALLOWED_HOSTS", "").split(",")
+        if not hosts or any(not h.strip() or "*" in h for h in hosts):
+            raise ValueError("production requires explicit allowed hosts")
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+        api.add_middleware(TrustedHostMiddleware, allowed_hosts=[h.strip() for h in hosts])
+        from packages.worker_lock import WorkerLock
+
+        worker_lock = WorkerLock(database)
     state = State(database)
     for name, tenant_config in configured.items():
         state.seed(
@@ -192,21 +273,41 @@ def create_app(
     from lab.arena import Arena
 
     arena = Arena(database)
+    from lab.campaigns import RunSpec, execute
+    from packages.jobs import JobCapacity, JobConflict, Jobs
+
+    jobs = Jobs(database)
+    lab_kind = os.getenv("MECHA_AGENT_PROVIDER", "disabled")
+    lab_provider = agent_provider or (
+        configured_provider(lab_kind) if lab_kind != "disabled" else None
+    )
+    lab_model = os.getenv("MECHA_AGENT_MODEL", "local-operator-selected")
     api.state.audit = ledger
     api.state.policy = policy
     api.state.control = state
+    api.state.jobs = jobs
 
     async def authenticate(request: Request) -> tuple[str, Identity]:
         supplied = request.headers.get("authorization", "").removeprefix("Bearer ")
         supplied = supplied or request.headers.get("x-api-key", "")
-        match = state.authenticate(supplied)
+
+        def lookup():
+            match = state.authenticate(supplied)
+            return match, state.allow_request(match[0], rate_limit) if match else False
+
+        match, admitted = await to_thread.run_sync(lookup) if state.persistent else lookup()
         if match is None:
             raise HTTPException(401, "invalid API key")
-        if not state.allow_request(match[0], rate_limit):
+        if not admitted:
             raise HTTPException(429, "tenant rate limit")
         return match
 
     Auth = Annotated[tuple[str, Identity], Depends(authenticate)]
+
+    async def append_decision(tenant: str, event: dict[str, str | int | float | bool]) -> str:
+        if ledger.persistent:
+            return await to_thread.run_sync(ledger.append, tenant, event)
+        return ledger.append(tenant, event)
 
     def require(auth: tuple[str, Identity], roles: set[str]) -> str:
         if auth[1].role not in roles:
@@ -216,6 +317,92 @@ def create_app(
     @api.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok", "provider": type(model_provider).__name__}
+
+    @api.get("/ready")
+    async def ready():
+        try:
+            with state.lock:
+                state.db.execute("SELECT 1").fetchone()
+            with ledger.lock:
+                ledger.db.execute("SELECT 1").fetchone()
+            return {"status": "ready", "storage": "sqlite", "worker_mode": "single"}
+        except sqlite3.Error as exc:
+            raise HTTPException(503, "storage unavailable") from exc
+
+    @api.get("/lab/config")
+    async def lab_config(auth: Auth):
+        require(auth, {"viewer", "operator", "admin"})
+        from agents.email import ATTACK_EMAIL, BENIGN_EMAIL, DEFENSES, TASK
+
+        return {
+            "enabled": lab_provider is not None,
+            "provider": type(lab_provider).__name__ if lab_provider else "disabled",
+            "model": lab_model,
+            "defenses": DEFENSES,
+            "task": TASK,
+            "attack_email": ATTACK_EMAIL,
+            "benign_email": BENIGN_EMAIL,
+            "tools": "fake inbox, fake private memo, simulated email ledger",
+        }
+
+    @api.post("/lab/jobs", status_code=202)
+    async def submit_job(body: RunSpec, request: Request, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        if lab_provider is None:
+            raise HTTPException(503, "configure MECHA_AGENT_PROVIDER on the server first")
+        key = request.headers.get("idempotency-key", "")
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{8,128}", key):
+            raise HTTPException(422, "Idempotency-Key header required (8-128 safe characters)")
+        try:
+            identity, created = jobs.create(tenant, body, key)
+        except JobConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except JobCapacity as exc:
+            raise HTTPException(429, str(exc)) from exc
+        if created:
+            snapshot = store.get(tenant)
+
+            async def work(progress):
+                result = await execute(body, lab_provider, lab_model, snapshot, tenant, progress)
+                await append_decision(
+                    tenant,
+                    {
+                        "action": "allow",
+                        "rule": "lab-job-complete",
+                        "request_id": identity,
+                        "count": result["model_calls"],
+                    },
+                )
+                return result
+
+            try:
+                await append_decision(
+                    tenant, {"action": "allow", "rule": "lab-job-created", "request_id": identity}
+                )
+            except Exception as exc:
+                jobs.update(tenant, identity, "failed", {"error_code": "audit_unavailable"})
+                raise HTTPException(503, "audit unavailable") from exc
+            jobs.launch(tenant, identity, work)
+        return jobs.get(tenant, identity)
+
+    @api.get("/lab/jobs")
+    async def list_jobs(auth: Auth):
+        return {"jobs": jobs.list(auth[0])}
+
+    @api.get("/lab/jobs/{identity}")
+    async def get_job(identity: str, auth: Auth):
+        try:
+            return jobs.get(auth[0], identity)
+        except KeyError as exc:
+            raise HTTPException(404, "job not found") from exc
+
+    @api.post("/lab/jobs/{identity}/cancel")
+    async def cancel_job(identity: str, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        try:
+            return jobs.cancel(tenant, identity)
+        except KeyError as exc:
+            raise HTTPException(404, "job not found") from exc
 
     async def completion(body: ChatRequest, auth: tuple[str, Identity]) -> tuple[str, str]:
         tenant = require(auth, {"operator", "admin"})
@@ -229,7 +416,7 @@ def create_app(
             text = request_hook(message.content) if request_hook else message.content
             detection = await detector.inspect(text)
             if detection.action in {"flag", "shadow"}:
-                ledger.append(
+                await append_decision(
                     tenant,
                     {
                         "action": detection.action,
@@ -239,7 +426,7 @@ def create_app(
                     },
                 )
             if detection.action == "block":
-                ledger.append(
+                await append_decision(
                     tenant,
                     {
                         "action": "block",
@@ -262,7 +449,7 @@ def create_app(
         if response_hook:
             output = response_hook(output)
         cleaned = sanitize(output)
-        ledger.append(
+        await append_decision(
             tenant,
             {
                 "action": "allow",
@@ -615,6 +802,19 @@ def create_app(
             }
         elif body.method == "tools/call":
             params = body.params
+            from packages.detectors.channels import honeytool
+
+            alert = honeytool(str(params.get("name", "")))
+            if alert["severity"] == "high":
+                ledger.append(
+                    tenant,
+                    {
+                        "action": "block",
+                        "rule": alert["rule"],
+                        "reason": "decoy tool touched",
+                        "severity": "high",
+                    },
+                )
             arguments = params.get("arguments")
             if (
                 params.get("name") != "mock_summarize"
@@ -645,6 +845,14 @@ def create_app(
             }
         return {"jsonrpc": "2.0", "id": body.id, "result": result}
 
+    if os.getenv("MECHA_DASHBOARD_PATH"):
+        from fastapi.staticfiles import StaticFiles
+
+        api.mount(
+            "/",
+            StaticFiles(directory=os.environ["MECHA_DASHBOARD_PATH"], html=True),
+            name="console",
+        )
     return api
 
 

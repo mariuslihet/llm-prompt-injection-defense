@@ -17,6 +17,10 @@ def main() -> None:
     evaluate.add_argument("--budget", type=int, default=8, choices=range(1, 65))
     policy = sub.add_parser("verify-policy")
     policy.add_argument("path", type=Path)
+    flow = sub.add_parser("verify-flow")
+    flow.add_argument("program", type=Path)
+    flow.add_argument("inputs", type=Path)
+    flow.add_argument("--policy", type=Path, default=Path("packages/policy/default.yaml"))
     gate = sub.add_parser("gate")
     gate.add_argument("report", type=Path)
     load = sub.add_parser("load-test")
@@ -61,6 +65,20 @@ def main() -> None:
         errors = verify(compile_policy(args.path.read_text(encoding="utf-8")))
         print(json.dumps({"errors": errors}))
         raise SystemExit(bool(errors))
+    elif args.command == "verify-flow":
+        from packages.core import Value
+        from packages.ifc import Program
+        from packages.ifc.analysis import analyze
+        from packages.policy import compile_policy
+
+        program = Program.model_validate_json(args.program.read_text(encoding="utf-8"))
+        inputs = {
+            name: Value.model_validate(value)
+            for name, value in json.loads(args.inputs.read_text(encoding="utf-8")).items()
+        }
+        result = analyze(program, inputs, compile_policy(args.policy.read_text(encoding="utf-8")))
+        print(result.model_dump_json(indent=2))
+        raise SystemExit(bool(result.violations))
     elif args.command == "gate":
         from eval.gates import check
 

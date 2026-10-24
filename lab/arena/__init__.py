@@ -3,6 +3,7 @@
 import hashlib
 import sqlite3
 import threading
+from dataclasses import asdict
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -30,6 +31,8 @@ class Arena:
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, check_same_thread=False, timeout=10)
+        if path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS solves (tenant TEXT, player TEXT, level INTEGER, "
             "PRIMARY KEY(tenant,player,level))"
@@ -60,7 +63,7 @@ class Arena:
     def submit(self, tenant: str, body: Submission) -> dict[str, object]:
         attack = self.attacks.get(body.attack_id)
         if attack is None or command(body.payload) != command(attack.payload):
-            raise ValueError("use a mutation of the selected fake-data fixture")
+            raise ValueError("use a mutation of the selected sample-data test case")
         result = defend(body.agent, body.payload, LEVELS[body.level])
         success = attack.oracle.succeeds(result)
         digest = hashlib.sha256(body.payload.encode()).hexdigest()
@@ -85,6 +88,26 @@ class Arena:
                 )
         return {
             "success": success,
+            "level": body.level,
+            "defense": LEVELS[body.level],
+            "agent": body.agent,
+            "attack_id": body.attack_id,
+            "attempted_action": command(body.payload),
+            "effects": [asdict(effect) for effect in result.effects],
+            "output": result.text,
+            "trace": result.trace,
+            "explanation": (
+                "The vulnerable fixture follower converted document instructions "
+                "into a simulated tool action."
+                if success
+                else "The trusted program only summarized the untrusted document. "
+                "It never requested an email action."
+                if LEVELS[body.level] == "full-ifc"
+                else "The heuristic detector blocked this payload before the vulnerable agent ran."
+                if "heuristic block" in result.decisions
+                else "The simulated target ran, but its output and effects did not satisfy "
+                "this fixture's success oracle."
+            ),
             "digest": digest,
             "decisions": result.decisions,
             "simulated": True,

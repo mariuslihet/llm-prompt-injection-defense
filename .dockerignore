@@ -3,6 +3,7 @@
 **/node_modules
 **/dist
 .env
+.env.*
 artifacts
 docs/reports/*campaigns*
 **/__pycache__

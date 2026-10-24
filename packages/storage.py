@@ -21,9 +21,12 @@ class Identity(BaseModel):
 
 class State:
     def __init__(self, path: str = ":memory:") -> None:
+        self.persistent = path != ":memory:"
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, check_same_thread=False, timeout=10)
+        if path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
         self.lock = threading.RLock()
         self.db.executescript("""
           CREATE TABLE IF NOT EXISTS tenants (

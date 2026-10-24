@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools==83.0.0"]
+requires = ["setuptools==84.1.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mecha-security"
-version = "0.1.0"
+version = "0.2.0"
 description = "Offline-first prompt injection defense research platform"
 requires-python = ">=3.11"
 dependencies = [
@@ -16,9 +16,11 @@ dependencies = [
 research = ["torch==2.14.1", "transformers==5.20.2", "peft==0.21.2", "trl==1.16.0", "datasets==5.1.0"]
 telemetry = ["opentelemetry-sdk==1.45.1", "opentelemetry-exporter-otlp-proto-http==1.45.1"]
 postgres = ["psycopg[binary]==3.2.9"]
+multimodal = ["pypdf==6.21.2", "Pillow==13.0.0"]
+signing = ["cryptography==50.0.2"]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "hypothesis==6.131.9", "pytest-cov==6.1.1", "ruff==0.11.9", "mypy==1.15.0", "types-PyYAML==6.0.12.20250516", "pre-commit==4.2.0", "pip-audit==2.9.0", "setuptools==83.0.0"]
+dev = ["pytest==9.1.1", "hypothesis==6.131.9", "pytest-cov==6.1.1", "ruff==0.11.9", "mypy==1.15.0", "types-PyYAML==6.0.12.20250516", "pre-commit==4.2.0", "pip-audit==2.9.0", "setuptools==84.1.0"]
 
 [project.scripts]
 mecha = "packages.cli:main"

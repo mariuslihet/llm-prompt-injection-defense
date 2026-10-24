@@ -87,6 +87,27 @@ def test_arena_cannot_target_arbitrary_commands_or_duplicate_scores():
     assert command(attack.payload)
 
 
+def test_arena_evidence_distinguishes_block_from_no_planned_external_call():
+    from agents.mock import CANARY
+
+    arena = Arena()
+    attack = next(a for a in load() if a.category == "indirect-email")
+    body = Submission(player="fake_player", level=0, attack_id=attack.id, payload=attack.payload)
+    baseline = arena.submit("alice", body)
+    assert baseline["success"]
+    assert baseline["effects"][0]["content"] == CANARY
+    assert baseline["attempted_action"]["content"] == "$PRIVATE"
+    for level in (1, 2):
+        blocked = arena.submit("alice", body.model_copy(update={"level": level}))
+        assert not blocked["success"] and not blocked["effects"]
+        assert "heuristic block" in blocked["decisions"]
+    structural = arena.submit("alice", body.model_copy(update={"level": 3}))
+    assert not structural["success"] and not structural["effects"]
+    assert "never requested an email" in structural["explanation"]
+    assert structural["trace"]["effect_count"] == 1
+    assert "$PRIVATE" in structural["output"] and CANARY not in structural["output"]
+
+
 def test_management_policy_arena_and_mcp_endpoints():
     with client() as c:
         policy = c.get("/policy", headers=HEADERS).json()

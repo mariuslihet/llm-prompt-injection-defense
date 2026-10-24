@@ -25,6 +25,7 @@ class Result:
     text: str = ""
     effects: list[Effect] = field(default_factory=list)
     decisions: list[str] = field(default_factory=list)
+    trace: dict[str, object] | None = None
 
 
 def normalized(text: str) -> str:

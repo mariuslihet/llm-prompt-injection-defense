@@ -53,9 +53,11 @@ class LocalClassifier:
         self._pipeline = pipeline(
             "text-classification",
             model=AutoModelForSequenceClassification.from_pretrained(
-                path, local_files_only=True, trust_remote_code=False),
+                path, local_files_only=True, trust_remote_code=False
+            ),
             tokenizer=AutoTokenizer.from_pretrained(
-                path, local_files_only=True, trust_remote_code=False),
+                path, local_files_only=True, trust_remote_code=False
+            ),
             device=-1,
         )
 

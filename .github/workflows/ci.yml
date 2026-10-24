@@ -22,6 +22,8 @@ jobs:
       - run: uv run mecha verify-policy packages/policy/default.yaml
       - run: uv run mecha evaluate --seed 42 --budget 8 --output artifacts/ci
       - run: uv run mecha gate artifacts/ci.json
+      - run: uv run python -m eval.evolutionary --output artifacts/evolutionary.json
+        if: github.event_name == 'schedule'
       - run: uv run mecha load-test --output artifacts/load.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -56,3 +58,13 @@ jobs:
           cache-dependency-path: dashboard/package-lock.json
       - run: npm ci && npm run build
         working-directory: dashboard
+  optional-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.5'
+          python-version: '3.11'
+      - run: uv sync --frozen --extra signing --extra multimodal
+      - run: uv run --extra signing --extra multimodal pytest tests/test_signatures.py tests/test_hidden_channels.py

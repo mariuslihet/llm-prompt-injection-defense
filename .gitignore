@@ -9,7 +9,11 @@ __pycache__/
 htmlcov/
 *.egg-info/
 .env
+.env.*
+!.env.example
+!.env.mvp.example
 *.sqlite*
+*.worker.lock
 node_modules/
 dist/
 build/

@@ -34,6 +34,7 @@ def defend(agent: str, payload: str, config: str) -> Result:
         return Result(
             text=sanitize(values["summary"].data).text,
             decisions=[d.reason for d in runtime.decisions],
+            trace=runtime.snapshot().model_dump(mode="json"),
         )
     if config in {"detector", "detector-sanitizer"} and detect(payload).action == "block":
         return Result(decisions=["heuristic block"])

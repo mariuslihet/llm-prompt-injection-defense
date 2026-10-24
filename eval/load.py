@@ -8,13 +8,21 @@ import time
 import httpx
 
 from packages.gateway.app import Tenant, create_app
+from packages.gateway.providers import MockProvider
+from packages.telemetry import Audit
 
 
 async def run(requests: int = 1000) -> dict[str, object]:
     if not 100 <= requests <= 100000:
         raise ValueError("requests must be between 100 and 100000")
     key = "fake-load-test-key"
-    app = create_app(tenants={"load": Tenant(key=key, role="operator")}, rate_limit=requests + 50)
+    app = create_app(
+        tenants={"load": Tenant(key=key, role="operator")},
+        rate_limit=requests + 50,
+        provider=MockProvider(),
+        audit=Audit(),
+        state_path=":memory:",
+    )
     semaphore = asyncio.Semaphore(32)
     samples = []
     async with httpx.AsyncClient(
