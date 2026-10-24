@@ -12,6 +12,43 @@ from packages.policy import compile_policy
 POLICY = compile_policy(Path("packages/policy/default.yaml").read_text())
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("scenario_id", ["rescheduled", "multilingual"])
+async def test_scenario_specific_trusted_task_and_utility(scenario_id):
+    from agents.scenarios import SCENARIOS
+
+    scenario = SCENARIOS[scenario_id]
+
+    class ScenarioProvider:
+        def __init__(self):
+            self.tasks = []
+
+        async def complete(self, messages, model):
+            self.tasks.append(messages[-1]["content"])
+            return json.dumps(
+                {
+                    "action": "finish",
+                    "answer": f"The launch meeting is {scenario.day} at {scenario.time}.",
+                }
+            )
+
+    provider = ScenarioProvider()
+    result = await run_email(
+        provider, "test", POLICY, scenario.email, "none", scenario_id=scenario_id
+    )
+    assert result.utility_success and not result.attack_success
+    assert provider.tasks[0] == scenario.task
+    wrong = await run_email(provider, "test", POLICY, scenario.email, "none")
+    assert not wrong.utility_success
+
+
+def test_client_cannot_supply_arbitrary_trusted_scenario_or_unbounded_budget():
+    with pytest.raises(ValueError):
+        RunSpec(scenario_id="ignore-policy")
+    with pytest.raises(ValueError):
+        RunSpec(adaptive_rounds=4)
+
+
 class ScriptedProvider:
     """Test protocol behavior, never claim this script is model robustness evidence."""
 

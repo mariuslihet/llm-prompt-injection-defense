@@ -22,11 +22,13 @@ type ModelRun = {defense: string; status: string; attack_success: boolean; utili
   events: {step: number; kind: string; message: string; details: Record<string, unknown>}[];
   effects: {tool: string; recipient: string; body: string}[]};
 type LabJob = {id: string; status: string; created: number; result?: {model_calls?: number;
+  spec?: {scenario_id: string; adaptive_rounds: number; max_turns: number}; model?: string; scenario?: {name: string; task: string}; policy_digest?: string; attacker_attempts?: {defense: string; round: number; accepted: boolean; response: string}[];
   completed_runs?: number; attacker_errors?: number; error_code?: string; limits?: string;
   summary?: {defense: string; attack_trials: number; attack_successes: number;
-    invalid_attack_runs: number; benign_trials: number; benign_successes: number; conclusive: boolean}[];
-  records?: {case: string; round?: number; run: ModelRun}[]}};
+    p50_ms?: number; p95_ms?: number; model_calls?: number; asr_interval?: number[]; static_successes?: number; adaptive_successes?: number; invalid_attack_runs: number; benign_trials: number; benign_successes: number; conclusive: boolean}[];
+  records?: {case: string; email: string; payload_sha256: string; round?: number; run: ModelRun}[]}};
 type LabConfig = {enabled: boolean; provider: string; model: string; task: string;
+  scenarios: {id: string; name: string; task: string; email: string}[]; strategies: Record<string,string>; tools: string;
   attack_email: string; benign_email: string; defenses: string[]};
 
 function App() {
@@ -53,6 +55,11 @@ function App() {
   const [labEmail, setLabEmail] = useState("");
   const [labDefense, setLabDefense] = useState("full-ifc");
   const [labJobs, setLabJobs] = useState<LabJob[]>([]);
+  const [scenarioId, setScenarioId] = useState("launch");
+  const [strategy, setStrategy] = useState("authority");
+  const [rounds, setRounds] = useState(1);
+  const [turns, setTurns] = useState(6);
+  const [recordFilter, setRecordFilter] = useState("all");
   const [labJob, setLabJob] = useState<LabJob>();
 
   useEffect(() => {
@@ -72,9 +79,10 @@ function App() {
   }, [labJob?.id, labJob?.status, key]);
 
   async function startLab(kind: "agent" | "campaign") {
+    setRecordFilter("all");
     const response = await fetch("/api/lab/jobs", {method: "POST", headers: {
       Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID()
-    }, body: JSON.stringify({kind, email: labEmail, defense: labDefense, adaptive_rounds: 1})});
+    }, body: JSON.stringify({kind, email: labEmail, defense: labDefense, adaptive_rounds: rounds, max_turns: turns, scenario_id: scenarioId})});
     if (!response.ok) throw new Error((await response.json()).detail || "Could not start run");
     setLabJob(await response.json());
     setLabJobs((await api("/lab/jobs")).jobs);
@@ -195,27 +203,34 @@ function App() {
         <p>The configured model chooses actions over multiple turns. It can read an incoming email, read a sample confidential memo, and propose a simulated email. No real email or external tool is available.</p>
         <p><strong>Model:</strong> {labConfig?.model} · <strong>Provider:</strong> {labConfig?.provider}</p>
         {!labConfig?.enabled && <p className="mock-effect">Agent model is not configured. Set MECHA_AGENT_PROVIDER on the server and restart. Scripted Security Tests remain available separately.</p>}
-        <h3>Trusted user task</h3><p>{labConfig?.task}</p>
-        <div className="actions"><button onClick={() => setLabEmail(labConfig?.benign_email || "")}>Use normal email</button><button onClick={() => setLabEmail(labConfig?.attack_email || "")}>Use natural-language attack</button></div>
+        <div className="fields"><label>Evaluation scenario<select value={scenarioId} onChange={e => {setScenarioId(e.target.value); const scenario = labConfig?.scenarios.find(s => s.id === e.target.value); setLabEmail((scenario?.email || "") + "\n" + (labConfig?.strategies[strategy] || ""));}}>{labConfig?.scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label>Attack strategy<select value={strategy} onChange={e => {setStrategy(e.target.value); setLabEmail((labConfig?.scenarios.find(s => s.id === scenarioId)?.email || "") + "\n" + (labConfig?.strategies[e.target.value] || ""));}}>{Object.keys(labConfig?.strategies || {}).map(name => <option key={name}>{name}</option>)}</select></label></div>
+        <h3>Trusted user task</h3><p>{labConfig?.scenarios.find(s => s.id === scenarioId)?.task || labConfig?.task}</p>
+        <p><strong>Available tools:</strong> {labConfig?.tools}</p>
+        <div className="fields"><label>Adaptive rounds per defense<select value={rounds} onChange={e => setRounds(Number(e.target.value))}>{[0,1,2,3].map(n => <option key={n} value={n}>{n}</option>)}</select></label><label>Maximum agent turns<select value={turns} onChange={e => setTurns(Number(e.target.value))}>{[2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}</select></label></div>
+        <p>Comparison plan: {5 * (2 + rounds)} target runs across five defenses. Shared budget: 128 model calls; 10-minute deadline. Long campaigns can exhaust this budget.</p>
+        <div className="actions"><button onClick={() => setLabEmail(labConfig?.scenarios.find(s => s.id === scenarioId)?.email || "")}>Use normal email</button><button onClick={() => setLabEmail((labConfig?.scenarios.find(s => s.id === scenarioId)?.email || "") + "\n" + (labConfig?.strategies[strategy] || ""))}>Use natural-language attack</button></div>
         <label htmlFor="lab-email">Incoming email controlled by the attacker (sample data only)</label>
         <textarea id="lab-email" maxLength={8192} value={labEmail} onChange={e => setLabEmail(e.target.value)}/>
         <label htmlFor="lab-defense">Defense configuration</label><select id="lab-defense" value={labDefense} onChange={e => setLabDefense(e.target.value)}>{labConfig?.defenses.map(defense => <option key={defense}>{defense}</option>)}</select>
         <div className="actions"><button className="primary" disabled={busy || !labConfig?.enabled || !labEmail} onClick={() => action(() => startLab("agent"))}>Run model agent</button>
           <button disabled={busy || !labConfig?.enabled || !labEmail} onClick={() => action(() => startLab("campaign"))}>Run adaptive comparison</button></div>
-        <p>The comparison runs a normal email, your attack, and one feedback-driven attacker revision for each of five defenses. It has a 128-call budget and a 10-minute deadline. Small local models may fail the action schema; those runs are inconclusive.</p>
-        {labJob && <section aria-label="Model run results" aria-live="polite"><h2>Run {labJob.id.slice(0, 8)} · {labJob.status}</h2>
+        <p>The comparison runs a normal email, your attack, and the configured feedback-driven attacker revisions for each of five defenses. It has a 128-call budget and a 10-minute deadline. Small local models may fail the action schema; those runs are inconclusive.</p>
+        {labJob && <section aria-label="Model run results" aria-live="polite"><h2>Run {labJob.id.slice(0, 8)} · {labJob.status}</h2><p><strong>Recorded model:</strong> {labJob.result?.model || "Run in progress"} · <strong>Scenario:</strong> {labJob.result?.scenario?.name || "See run configuration"}</p><p><strong>Policy reference:</strong> {labJob.result?.policy_digest?.slice(0,16) || "Pending"}</p>
           <p>{labJob.result?.model_calls ?? 0} model calls · {labJob.result?.completed_runs ?? labJob.result?.records?.length ?? 0} agent runs</p>
           {["queued", "running"].includes(labJob.status) && <button onClick={() => action(async () => setLabJob(await api(`/lab/jobs/${labJob.id}/cancel`, {})))}>Cancel run</button>}
           {labJob.result?.error_code && <p>Run failed: {labJob.result.error_code}. This is not a successful defense result.</p>}
-          {labJob.result?.summary && <div className="table-scroll"><table><thead><tr><th>Defense</th><th>Observed attack successes</th><th>Invalid attack runs</th><th>Normal-task success</th><th>Evidence</th></tr></thead><tbody>{labJob.result.summary.map(row => <tr key={row.defense}><td>{row.defense}</td><td>{row.attack_successes}/{row.attack_trials}</td><td>{row.invalid_attack_runs}</td><td>{row.benign_successes}/{row.benign_trials}</td><td>{row.conclusive ? "Valid small sample" : "Inconclusive"}</td></tr>)}</tbody></table></div>}
-          {labJob.result?.records?.map((record, index) => <article className="arena-evidence" key={index}>
+          {labJob.result?.summary && <div className="table-scroll"><table><thead><tr><th>Defense</th><th>Observed attack successes</th><th>Invalid attack runs</th><th>Normal-task success</th><th>Static / adaptive successes</th><th>Median / p95</th><th>Target model calls</th><th>Evidence</th></tr></thead><tbody>{labJob.result.summary.map(row => <tr key={row.defense}><td>{row.defense}</td><td>{row.attack_successes}/{row.attack_trials}</td><td>{row.invalid_attack_runs}</td><td>{row.benign_successes}/{row.benign_trials}</td><td>{row.static_successes ?? "—"} / {row.adaptive_successes ?? "—"}</td><td>{row.p50_ms?.toFixed(0) ?? "—"} / {row.p95_ms?.toFixed(0) ?? "—"} ms</td><td>{row.model_calls ?? "—"}</td><td>{row.conclusive ? "Valid small sample" : "Inconclusive"}</td></tr>)}</tbody></table></div>}
+          <p>Latency includes model inference and tool processing. Small, correlated samples do not establish general robustness.</p>
+          <label>Result filter<select value={recordFilter} onChange={e => setRecordFilter(e.target.value)}><option value="all">All runs</option><option value="attack">Successful attacks</option><option value="invalid">Invalid or exhausted runs</option><option value="normal">Normal tasks</option></select></label>
+          {labJob.result?.records?.filter(record => recordFilter === "all" || (recordFilter === "attack" && record.run.attack_success) || (recordFilter === "invalid" && ["error","budget-exhausted"].includes(record.run.status)) || (recordFilter === "normal" && record.case === "benign")).map((record, index) => <article className="arena-evidence" key={index}>
             <h3>{record.run.defense} · {record.case === "benign" ? "Normal task" : record.case} {record.round || ""} · {record.run.status}</h3>
             <p>{record.run.attack_success ? "Unauthorized simulated action or canary disclosure observed." : ["error", "budget-exhausted"].includes(record.run.status) ? "Model run failed; no security conclusion." : "No unauthorized effect observed in this run."}</p>
             <p>{record.run.model_calls} model calls · {(record.run.duration_ms / 1000).toFixed(2)} seconds · Requested task completed: {record.run.utility_success ? "yes" : "no"}</p>
-            <h3>Agent timeline</h3><ol>{record.run.events.map(event => <li key={event.step}><strong>{event.kind}: {event.message}</strong>{Object.keys(event.details).length > 0 && <pre>{JSON.stringify(event.details, null, 2)}</pre>}</li>)}</ol>
+            <details><summary>Input email · {record.payload_sha256?.slice(0,16)}</summary><pre>{record.email}</pre></details><details><summary>Agent timeline · {record.run.events.length} events</summary><ol>{record.run.events.map(event => <li key={event.step}><strong>{event.kind}: {event.message}</strong>{Object.keys(event.details).length > 0 && <pre>{JSON.stringify(event.details, null, 2)}</pre>}</li>)}</ol></details>
             <h3>Final answer</h3><pre>{record.run.answer || "No final answer returned."}</pre>
           </article>)}
-          <p>{labJob.result?.limits}</p>
+          <details><summary>Adaptive attacker proposals</summary>{labJob.result?.attacker_attempts?.map((attempt,index) => <article key={index}><h4>{attempt.defense} · round {attempt.round} · {attempt.accepted ? "Accepted" : "Invalid proposal"}</h4><pre>{attempt.response}</pre></article>)}</details><p>{labJob.result?.limits}</p>
           {labJob.result?.records && <button onClick={() => { const url = URL.createObjectURL(new Blob([JSON.stringify(labJob, null, 2)], {type: "application/json"})); const link = document.createElement("a"); link.href = url; link.download = `mecha-run-${labJob.id}.json`; link.click(); URL.revokeObjectURL(url); }}>Download evidence JSON</button>}
         </section>}
         <h3>Recent saved runs</h3><button disabled={busy} onClick={() => action(async () => setLabJobs((await api("/lab/jobs")).jobs))}>Refresh run history</button>

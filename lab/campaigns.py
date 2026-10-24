@@ -2,13 +2,16 @@
 
 import hashlib
 import json
+import statistics
 from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from agents.email import ATTACK_EMAIL, BENIGN_EMAIL, DEFENSES, run_email
+from agents.email import ATTACK_EMAIL, DEFENSES, run_email
 from agents.mock import CANARY
+from agents.scenarios import SCENARIOS
+from eval.harness import wilson
 from packages.gateway.providers import Provider
 from packages.gateway.structured import json_text
 from packages.policy import Policy
@@ -24,6 +27,7 @@ class RunSpec(BaseModel):
     adaptive_rounds: int = Field(default=1, ge=0, le=3)
     max_turns: int = Field(default=6, ge=1, le=8)
     seed: Literal[42] = 42
+    scenario_id: Literal["launch", "rescheduled", "multilingual"] = "launch"
 
     @field_validator("email")
     @classmethod
@@ -69,15 +73,27 @@ async def execute(
     defenses = DEFENSES if spec.kind == "campaign" else (spec.defense,)
     for defense in defenses:
         cases = (
-            [("benign", BENIGN_EMAIL), ("static", spec.email)]
+            [("benign", SCENARIOS[spec.scenario_id].email), ("static", spec.email)]
             if spec.kind == "campaign"
-            else [("custom", spec.email)]
+            else [
+                (
+                    "benign" if spec.email == SCENARIOS[spec.scenario_id].email else "custom",
+                    spec.email,
+                )
+            ]
         )
         current = spec.email
         feedback: dict[str, object] = {}
         for category, payload in cases:
             result = await run_email(
-                budget, model, policy, payload, defense, tenant=tenant, max_turns=spec.max_turns
+                budget,
+                model,
+                policy,
+                payload,
+                defense,
+                tenant=tenant,
+                max_turns=spec.max_turns,
+                scenario_id=spec.scenario_id,
             )
             row = {
                 "case": category,
@@ -146,7 +162,14 @@ async def execute(
                 )
                 break
             result = await run_email(
-                budget, model, policy, current, defense, tenant=tenant, max_turns=spec.max_turns
+                budget,
+                model,
+                policy,
+                current,
+                defense,
+                tenant=tenant,
+                max_turns=spec.max_turns,
+                scenario_id=spec.scenario_id,
             )
             feedback = result.model_dump(mode="json")
             records.append(
@@ -169,6 +192,11 @@ async def execute(
         invalid = sum(r["run"]["status"] in {"error", "budget-exhausted"} for r in attacks)
         all_invalid = sum(r["run"]["status"] in {"error", "budget-exhausted"} for r in selected)
         successes = sum(r["run"]["attack_success"] for r in attacks)
+        durations = sorted(r["run"]["duration_ms"] for r in selected)
+        valid_attacks = [
+            r for r in attacks if r["run"]["status"] not in {"error", "budget-exhausted"}
+        ]
+        valid_successes = sum(r["run"]["attack_success"] for r in valid_attacks)
         table.append(
             {
                 "defense": defense,
@@ -181,10 +209,28 @@ async def execute(
                 "benign_trials": len(benign),
                 "benign_successes": sum(r["run"]["utility_success"] for r in benign),
                 "benign_blocked": sum(r["run"]["status"] == "blocked" for r in benign),
+                "p50_ms": statistics.median(durations) if durations else None,
+                "p95_ms": durations[max(0, (95 * len(durations) + 99) // 100 - 1)]
+                if durations
+                else None,
+                "model_calls": sum(r["run"]["model_calls"] for r in selected),
+                "asr_interval": wilson(valid_successes, len(valid_attacks)),
+                "valid_attack_trials": len(valid_attacks),
+                "static_successes": sum(
+                    r["run"]["attack_success"] for r in selected if r["case"] == "static"
+                ),
+                "adaptive_successes": sum(
+                    r["run"]["attack_success"] for r in selected if r["case"] == "adaptive"
+                ),
             }
         )
     return {
         "spec": spec.model_dump(),
+        "scenario": {
+            "id": spec.scenario_id,
+            "name": SCENARIOS[spec.scenario_id].name,
+            "task": SCENARIOS[spec.scenario_id].task,
+        },
         "policy_digest": policy.digest,
         "model": model,
         "provider": type(provider).__name__,

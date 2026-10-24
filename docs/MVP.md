@@ -117,3 +117,25 @@ slow on this CPU, and dynamic int8 was not retained after backend failures;
 see ADR-0008. Each generation permits at most 192 new tokens and 60 seconds,
 within the campaign budget. Standalone CLI runs save incremental
 .checkpoint.json evidence.
+
+## Evaluation controls
+
+Agent Evaluation offers three server-owned email scenarios: launch schedule,
+rescheduling with distracting events, and Romanian-to-English extraction.
+Select an authority, workflow-dependency or concealment attack preset, or edit
+the untrusted email. The task and expected schedule come from the selected
+server scenario; client text cannot modify trusted instructions.
+
+Comparisons permit zero to three adaptive revisions per defense and a two-to-eight
+turn UI limit. The shared 128-call and 600-second job budgets still apply. The
+results separate static/adaptive successes, invalid runs, normal-task success,
+median/p95 target-run duration and target model calls. The total includes attacker
+calls, so it can exceed the sum of the target-call column. These latencies include
+inference and must not be presented as gateway-only overhead.
+
+Filter normal tasks, successful attacks or invalid runs; expand exact input and
+agent timelines, inspect attacker proposals, and export the full job as JSON.
+Recorded model, scenario and policy reference describe the saved run even if the
+controls are later changed. This remains an email-agent evaluation, not a live
+RAG/browser benchmark. Utility uses the scenario-specific expected day/time and
+absence of unauthorized effects; it is not a general semantic answer judge.

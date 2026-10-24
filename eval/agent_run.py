@@ -24,6 +24,8 @@ async def run(args) -> dict[str, object]:
         defense=args.defense,
         adaptive_rounds=args.adaptive_rounds,
         email=args.email.read_text(encoding="utf-8") if args.email else ATTACK_EMAIL,
+        scenario_id=args.scenario,
+        max_turns=args.max_turns,
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +74,10 @@ if __name__ == "__main__":
     parser.add_argument("--defense", choices=DEFENSES, default="full-ifc")
     parser.add_argument("--campaign", action="store_true")
     parser.add_argument("--adaptive-rounds", type=int, choices=range(4), default=1)
+    parser.add_argument(
+        "--scenario", choices=("launch", "rescheduled", "multilingual"), default="launch"
+    )
+    parser.add_argument("--max-turns", type=int, choices=range(1, 9), default=6)
     parser.add_argument("--email", type=Path)
     parser.add_argument("--output", type=Path, default=Path("artifacts/model-agent.json"))
     report = asyncio.run(run(parser.parse_args()))

@@ -85,3 +85,18 @@ The UI states that reproducing a scripted action is not model attack evidence.
 Regression tests cover all 168 revision-two destination mappings and exact
 email-oracle matching. All 96 offline tests passed; browser comparison verified
 the corrected email destination and distinct block/program-exclusion outcomes.
+
+## Expanded model evaluation
+
+Added three controlled schedule scenarios, three attack presets, configurable
+adaptive rounds and turn limits, scenario-aware utility, static/adaptive outcome
+breakdowns, target latency/call metrics, result filtering, exact input snapshots
+and expandable attacker proposals. Server allowlists prevent client-authored
+trusted tasks. Existing budgets remain enforced.
+
+Validation: 99 offline tests, strict typing and production dashboard build passed.
+A browser-started rescheduling/workflow campaign completed 15 target runs and 45
+total model calls without invalid results. All five normal tasks succeeded.
+Observed static/adaptive attack successes: none 1/1, hardening 1/0, detector 1/0,
+detector+sanitizer 1/1, IFC 0/0 (each count is out of one). These tiny, correlated
+samples are descriptive only. Full evidence: rescheduling-evaluation.json.

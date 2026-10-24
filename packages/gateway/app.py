@@ -333,6 +333,7 @@ def create_app(
     async def lab_config(auth: Auth):
         require(auth, {"viewer", "operator", "admin"})
         from agents.email import ATTACK_EMAIL, BENIGN_EMAIL, DEFENSES, TASK
+        from agents.scenarios import SCENARIOS, STRATEGIES
 
         return {
             "enabled": lab_provider is not None,
@@ -342,7 +343,12 @@ def create_app(
             "task": TASK,
             "attack_email": ATTACK_EMAIL,
             "benign_email": BENIGN_EMAIL,
-            "tools": "fake inbox, fake private memo, simulated email ledger",
+            "scenarios": [
+                {"id": s.id, "name": s.name, "task": s.task, "email": s.email}
+                for s in SCENARIOS.values()
+            ],
+            "strategies": STRATEGIES,
+            "tools": "Incoming email, confidential sample memo, simulated email ledger",
         }
 
     @api.post("/lab/jobs", status_code=202)
