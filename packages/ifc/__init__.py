@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from packages.core import Confidentiality, Label, Trust, Value
+from packages.ifc.trace import ExecutionTrace, LabelSnapshot, TraceStep
 from packages.policy import Approvals, Decision, Policy, binding, evaluate
 
 
@@ -84,20 +85,59 @@ class Interpreter:
         self.decisions: list[Decision] = []
         self.effects: list[tuple[str, dict[str, str]]] = []
         self.shadow_decisions: list[Decision] = []
+        self.trace: list[TraceStep] = []
 
     def run(self, program: Program, inputs: dict[str, Value]) -> dict[str, Value]:
+        # Validate every reference before any effect, including later instructions.
+        known = set(inputs)
+        for instruction in program.instructions:
+            if isinstance(instruction, Extract | Concat):
+                if instruction.output in known:
+                    raise ValueError("SSA assignment would overwrite an existing label")
+                references = (
+                    (instruction.source,)
+                    if isinstance(instruction, Extract)
+                    else (instruction.left, instruction.right)
+                )
+                for reference in references:
+                    if reference not in known:
+                        raise KeyError(reference)
+                known.add(instruction.output)
+            else:
+                for reference in instruction.arguments.values():
+                    if reference not in known:
+                        raise KeyError(reference)
         values = inputs.copy()
         # Conservative control taint includes every supplied untrusted input,
         # including unused inputs, rather than relying on declared reads alone.
         untrusted = any(v.label.trust == Trust.UNTRUSTED for v in values.values())
-        for instruction in program.instructions:
+        for index, instruction in enumerate(program.instructions):
             if isinstance(instruction, Extract):
                 self._fresh(instruction.output, values)
                 values[instruction.output] = quarantine(values[instruction.source])
+                self.trace.append(
+                    TraceStep(
+                        index=index,
+                        op="extract",
+                        inputs=(LabelSnapshot.of(values[instruction.source]),),
+                        output=LabelSnapshot.of(values[instruction.output]),
+                    )
+                )
             elif isinstance(instruction, Concat):
                 self._fresh(instruction.output, values)
                 values[instruction.output] = values[instruction.left].concat(
                     values[instruction.right]
+                )
+                self.trace.append(
+                    TraceStep(
+                        index=index,
+                        op="concat",
+                        inputs=(
+                            LabelSnapshot.of(values[instruction.left]),
+                            LabelSnapshot.of(values[instruction.right]),
+                        ),
+                        output=LabelSnapshot.of(values[instruction.output]),
+                    )
                 )
             else:
                 arguments = {k: values[v] for k, v in instruction.arguments.items()}
@@ -113,6 +153,14 @@ class Interpreter:
                     approved=approved,
                 )
                 self.decisions.append(decision)
+                self.trace.append(
+                    TraceStep(
+                        index=index,
+                        op="call",
+                        inputs=tuple(LabelSnapshot.of(v) for v in arguments.values()),
+                        decision=decision,
+                    )
+                )
                 # Shadow never executes denied calls in the sandbox. It records
                 # would-deny decisions but cannot weaken structural enforcement.
                 if self.policy.mode == "shadow":
@@ -122,6 +170,13 @@ class Interpreter:
                         (instruction.tool, {k: v.data for k, v in arguments.items()})
                     )
         return values
+
+    def snapshot(self) -> ExecutionTrace:
+        return ExecutionTrace(
+            policy_digest=self.policy.digest,
+            steps=tuple(self.trace),
+            effect_count=len(self.effects),
+        )
 
     @staticmethod
     def _fresh(name: str, values: dict[str, Value]) -> None:

@@ -42,6 +42,7 @@ spec:
                   key: tenant-keys
             - {name: MECHA_PROVIDER, value: mock}
             - {name: MECHA_AUDIT_PATH, value: /data/audit.sqlite}
+            - {name: MECHA_STATE_PATH, value: /data/state.sqlite}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

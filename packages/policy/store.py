@@ -36,6 +36,7 @@ class PolicyStore:
         if errors:
             raise ValueError("; ".join(errors))
         with self.lock, self.db:
+            self.db.execute("BEGIN IMMEDIATE")
             row = self.db.execute(
                 "SELECT COALESCE(MAX(revision),0)+1 FROM policies WHERE tenant=?", (tenant,)
             ).fetchone()

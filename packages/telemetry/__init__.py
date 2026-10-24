@@ -27,8 +27,21 @@ class Audit:
 
     def append(self, tenant: str, event: dict[str, str | int | float | bool]) -> str:
         # An allowlist prevents accidental prompt, credential and PII logging.
-        if set(event) - {"action", "rule", "reason", "request_id", "duration_ms", "model", "count"}:
+        if set(event) - {
+            "action",
+            "rule",
+            "reason",
+            "request_id",
+            "duration_ms",
+            "model",
+            "count",
+            "trace",
+        }:
             raise ValueError("non-metadata audit field")
+        if "trace" in event:
+            from packages.ifc.trace import ExecutionTrace
+
+            ExecutionTrace.model_validate_json(str(event["trace"]))
         encoded = json.dumps({"tenant": tenant, **event}, sort_keys=True, separators=(",", ":"))
         with self.lock:
             try:
@@ -71,3 +84,39 @@ class Audit:
 
     def close(self) -> None:
         self.db.close()
+
+    def incident(self, tenant: str, digest: str) -> dict[str, object] | None:
+        with self.lock:
+            row = self.db.execute(
+                "SELECT event,digest FROM audit WHERE tenant=? AND digest=?", (tenant, digest)
+            ).fetchone()
+        if row is None:
+            return None
+        event = json.loads(row[0])
+        if "trace" in event:
+            event["trace"] = json.loads(event["trace"])
+        return {"event": event, "digest": row[1]}
+
+    def metrics(self, tenant: str) -> dict[str, object]:
+        with self.lock:
+            rows = self.db.execute("SELECT event FROM audit WHERE tenant=?", (tenant,)).fetchall()
+        actions: dict[str, int] = {}
+        rules: dict[str, int] = {}
+        durations = []
+        for (encoded,) in rows:
+            event = json.loads(encoded)
+            action, rule = event.get("action", "unknown"), event.get("rule", "unknown")
+            actions[action] = actions.get(action, 0) + 1
+            rules[rule] = rules.get(rule, 0) + 1
+            if "duration_ms" in event:
+                durations.append(event["duration_ms"])
+        return {
+            "total": len(rows),
+            "actions": actions,
+            "rules": rules,
+            "block_rate": actions.get("block", 0) / len(rows) if rows else 0,
+            "flag_rate": actions.get("flag", 0) / len(rows) if rows else 0,
+            "p95_ms": sorted(durations)[max(0, (len(durations) * 95 + 99) // 100 - 1)]
+            if durations
+            else None,
+        }

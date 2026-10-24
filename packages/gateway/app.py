@@ -1,14 +1,12 @@
 """Mock-first gateway. Run on loopback; explicit credentials required to serve requests."""
 
-import hmac
 import json
 import os
-import secrets
-import threading
+import sqlite3
 import time
 import uuid
-from collections import defaultdict, deque
 from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -22,10 +20,11 @@ from packages.core import Segment
 from packages.detectors import LocalClassifier
 from packages.detectors.cascade import Cascade, CascadeConfig, ProviderJudge
 from packages.gateway.providers import MockProvider, Provider, RealProvider
-from packages.ifc import Interpreter, Program, trusted_value, untrusted_value
-from packages.policy import Approvals, binding, compile_policy, verify
+from packages.ifc import Interpreter, Program, plan, trusted_value, untrusted_value
+from packages.policy import binding, compile_policy, verify
 from packages.policy.store import PolicyStore
 from packages.sanitizers import sanitize
+from packages.storage import Identity, State, StateApprovals
 from packages.telemetry import Audit
 
 DEFAULT_POLICY = Path(__file__).parents[1] / "policy" / "default.yaml"
@@ -112,6 +111,13 @@ class TenantEdit(BaseModel):
     role: Literal["viewer", "operator", "admin"]
 
 
+class IFCRun(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task: Literal["summarize", "email-summary"] = "summarize"
+    document: str = Field(max_length=32768)
+    recipient: str = Field(default="team@example.invalid", max_length=254)
+
+
 class RPC(BaseModel):
     model_config = ConfigDict(extra="forbid")
     jsonrpc: Literal["2.0"] = "2.0"
@@ -129,8 +135,20 @@ def create_app(
     request_hook: Callable[[str], str] | None = None,
     response_hook: Callable[[str], str] | None = None,
     cascade: Cascade | None = None,
+    state_path: str | None = None,
 ) -> FastAPI:
-    api = FastAPI(title="Mecha", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        try:
+            yield
+        finally:
+            if audit is None:
+                ledger.close()
+            state.close()
+            store.db.close()
+            arena.db.close()
+
+    api = FastAPI(title="Mecha", version="0.1.0", lifespan=lifespan)
     api.add_middleware(BodyLimit)
     configured = (
         tenants
@@ -149,7 +167,15 @@ def create_app(
     policy = compile_policy(DEFAULT_POLICY.read_text(encoding="utf-8"))
     if verify(policy):
         raise ValueError("unsafe gateway policy")
-    approvals = Approvals()
+    database = state_path if state_path is not None else os.getenv("MECHA_STATE_PATH", ":memory:")
+    state = State(database)
+    for name, tenant_config in configured.items():
+        state.seed(
+            name,
+            tenant_config.key,
+            Identity(role=tenant_config.role, platform_admin=tenant_config.platform_admin),
+        )
+    approvals = StateApprovals(state)
     detector = cascade or Cascade(
         CascadeConfig(
             mode=os.getenv("MECHA_DETECTOR_MODE", "block"),
@@ -162,41 +188,27 @@ def create_app(
         if os.getenv("MECHA_JUDGE_MODEL")
         else None,
     )
-    store = PolicyStore(DEFAULT_POLICY.read_text(encoding="utf-8"))
+    store = PolicyStore(DEFAULT_POLICY.read_text(encoding="utf-8"), database)
     from lab.arena import Arena
 
-    arena = Arena()
-    calls: dict[str, deque[float]] = defaultdict(deque)
-    lock = threading.Lock()
+    arena = Arena(database)
     api.state.audit = ledger
     api.state.policy = policy
+    api.state.control = state
 
-    async def authenticate(request: Request) -> tuple[str, Tenant]:
+    async def authenticate(request: Request) -> tuple[str, Identity]:
         supplied = request.headers.get("authorization", "").removeprefix("Bearer ")
         supplied = supplied or request.headers.get("x-api-key", "")
-        match = next(
-            (
-                (name, tenant)
-                for name, tenant in configured.items()
-                if hmac.compare_digest(supplied, tenant.key)
-            ),
-            None,
-        )
+        match = state.authenticate(supplied)
         if match is None:
             raise HTTPException(401, "invalid API key")
-        now = time.monotonic()
-        with lock:
-            window = calls[match[0]]
-            while window and window[0] <= now - 60:
-                window.popleft()
-            if len(window) >= rate_limit:
-                raise HTTPException(429, "tenant rate limit")
-            window.append(now)
+        if not state.allow_request(match[0], rate_limit):
+            raise HTTPException(429, "tenant rate limit")
         return match
 
-    Auth = Annotated[tuple[str, Tenant], Depends(authenticate)]
+    Auth = Annotated[tuple[str, Identity], Depends(authenticate)]
 
-    def require(auth: tuple[str, Tenant], roles: set[str]) -> str:
+    def require(auth: tuple[str, Identity], roles: set[str]) -> str:
         if auth[1].role not in roles:
             raise HTTPException(403, "role denied")
         return auth[0]
@@ -205,7 +217,7 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok", "provider": type(model_provider).__name__}
 
-    async def completion(body: ChatRequest, auth: tuple[str, Tenant]) -> tuple[str, str]:
+    async def completion(body: ChatRequest, auth: tuple[str, Identity]) -> tuple[str, str]:
         tenant = require(auth, {"operator", "admin"})
         started = time.perf_counter()
         request_id = str(uuid.uuid4())
@@ -413,9 +425,49 @@ def create_app(
                 "action": "allow" if decision.allowed else "block",
                 "rule": decision.rule,
                 "reason": decision.reason,
+                "trace": runtime.snapshot().model_dump_json(),
             },
         )
         return {"decision": decision.model_dump(), "effects": runtime.effects, "simulated": True}
+
+    @api.post("/ifc/run")
+    async def ifc_run(body: IFCRun, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        runtime = Interpreter(store.get(tenant), tenant, approvals)
+        values = runtime.run(
+            plan(body.task),
+            {
+                "document": untrusted_value(body.document),
+                "recipient": trusted_value(body.recipient, sinks=frozenset({"send_email"})),
+            },
+        )
+        denied = any(not decision.allowed for decision in runtime.decisions)
+        digest = ledger.append(
+            tenant,
+            {
+                "action": "block" if denied else "allow",
+                "rule": "ifc",
+                "reason": "restricted program execution",
+                "trace": runtime.snapshot().model_dump_json(),
+            },
+        )
+        return {
+            "summary": sanitize(values["summary"].data).text,
+            "incident": digest,
+            "trace": runtime.snapshot().model_dump(mode="json"),
+            "simulated": True,
+        }
+
+    @api.get("/incidents/{digest}")
+    async def incident_get(digest: str, auth: Auth):
+        result = ledger.incident(auth[0], digest)
+        if result is None:
+            raise HTTPException(404, "unknown tenant incident")
+        return result
+
+    @api.get("/metrics")
+    async def metrics_get(auth: Auth):
+        return ledger.metrics(auth[0])
 
     @api.get("/audit")
     async def audit_events(auth: Auth):
@@ -464,24 +516,24 @@ def create_app(
         require(auth, {"admin"})
         if not auth[1].platform_admin:
             raise HTTPException(403, "platform administrator required")
-        return [{"name": name, "role": tenant.role} for name, tenant in configured.items()]
+        return state.tenants()
 
     @api.post("/tenants")
     async def tenant_create(body: TenantEdit, auth: Auth):
         tenant = require(auth, {"admin"})
         if not auth[1].platform_admin:
             raise HTTPException(403, "platform administrator required")
-        if body.name in configured:
-            raise HTTPException(409, "tenant already exists")
-        key = secrets.token_urlsafe(32)
-        configured[body.name] = Tenant(key=key, role=body.role)
+        try:
+            key = state.create_tenant(body.name, body.role)
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(409, "tenant already exists") from exc
         ledger.append(
             tenant, {"action": "create-tenant", "rule": "tenant", "reason": "platform admin"}
         )
         return {
             "name": body.name,
             "key": key,
-            "warning": "Save once; process-local until configured in env",
+            "warning": "Save once; only the key hash is retained",
         }
 
     @api.get("/arena/levels")
@@ -525,11 +577,11 @@ def create_app(
     @api.get("/arena/reviewed")
     async def arena_reviewed(auth: Auth):
         tenant = require(auth, {"admin"})
-        return {
-            "candidates": [
-                body.model_dump() for (owner, _), body in arena.reviewed.items() if owner == tenant
-            ]
-        }
+        return {"candidates": arena.candidates(tenant)}
+
+    @api.get("/arena/pending")
+    async def arena_pending(auth: Auth):
+        return {"candidates": arena.candidates(require(auth, {"admin"}), "pending")}
 
     @api.get("/export/cef")
     async def export_cef(auth: Auth):
