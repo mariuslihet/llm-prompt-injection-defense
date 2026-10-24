@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agents.mock import AGENTS, command
 from eval.harness import defend
-from lab.corpus import load
+from lab.corpus import generate, load
 
 LEVELS = ("none", "detector", "detector-sanitizer", "full-ifc")
 
@@ -27,6 +27,7 @@ class Submission(BaseModel):
 class Arena:
     def __init__(self, path: str = ":memory:") -> None:
         self.attacks = {a.id: a for a in load()}
+        self.attacks.update({a.id: a for a in generate(version=2)})
         self.lock = threading.Lock()
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -76,6 +77,27 @@ class Arena:
             else "goal_not_observed"
         )
         digest = hashlib.sha256(body.payload.encode()).hexdigest()
+        steps = ["Parse the embedded action to validate the selected regression case."]
+        if outcome == "blocked":
+            steps.append("The detector blocks the input before the scripted target runs.")
+        elif outcome == "action_not_planned":
+            steps.extend(
+                [
+                    "Run the trusted, fixed summary program over the untrusted input.",
+                    "Authorize the internal summary; do not execute the embedded attacker action.",
+                ]
+            )
+        else:
+            steps.extend(
+                [
+                    "Read embedded JSON. Do not interpret surrounding prose.",
+                    "Resolve any $PRIVATE / $SYSTEM placeholders to repository test values.",
+                    "Record the resulting action in memory without contacting external services.",
+                ]
+            )
+            if LEVELS[body.level] == "detector-sanitizer":
+                steps.append("Sanitize returned text; this cannot undo a recorded tool action.")
+        steps.append("Compare action type, destination and full content with the expected record.")
         with self.lock, self.db:
             self.db.execute("BEGIN IMMEDIATE")
             if success:
@@ -104,6 +126,10 @@ class Arena:
             "expected_harm": attack.expected_harm,
             "oracle": attack.oracle.model_dump(),
             "payload_sha256": digest,
+            "input_payload": body.payload,
+            "evidence_steps": steps,
+            "limitations": "No language model was called. No message was delivered or URL fetched.",
+            "legacy_case": body.attack_id.startswith("v1-"),
             "external_effect_count": sum(
                 effect.kind in {"send_email", "fetch_url"} for effect in result.effects
             ),
@@ -116,8 +142,9 @@ class Arena:
             "output": result.text,
             "trace": result.trace,
             "explanation": (
-                "The vulnerable fixture follower converted document instructions "
-                "into a simulated tool action."
+                "The scripted target parsed the embedded action, substituted test placeholders, "
+                "and recorded an action matching all three expected fields. "
+                "The surrounding instruction text was not evaluated by a model."
                 if success
                 else "The trusted program only summarized the untrusted document. "
                 "It never requested an email action or another external action. "

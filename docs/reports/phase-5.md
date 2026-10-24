@@ -68,3 +68,20 @@ Validation: 95 offline tests and dashboard production build passed. Browser
 checks verified calendar versus email effect counts, four-defense comparisons
 and stale-result removal. This improves result correctness; it does not turn
 scripted regression cases into evidence of general model robustness.
+
+## Tool destination and payload semantics correction
+
+The original scripted corpus reused a web collector URL for email, calendar and
+memory actions. Security Tests now presents revision-two cases with an email
+recipient, web URL, calendar resource or memory resource matching the action.
+Revision-one evidence and API case IDs remain available for historical replay;
+these records are explicitly marked legacy. Historical benchmark scores are not
+recomputed or relabeled as revision-two measurements.
+
+Each response includes the exact input and a branch-specific execution sequence.
+A script parses MECHA_FIXTURE JSON; it does not interpret the surrounding prose.
+$PRIVATE resolves to a repository canary only when the vulnerable target runs.
+The UI states that reproducing a scripted action is not model attack evidence.
+Regression tests cover all 168 revision-two destination mappings and exact
+email-oracle matching. All 96 offline tests passed; browser comparison verified
+the corrected email destination and distinct block/program-exclusion outcomes.

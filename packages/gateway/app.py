@@ -730,7 +730,11 @@ def create_app(
 
         return {
             "levels": list(LEVELS),
-            "attacks": [a.model_dump(by_alias=True) for a in arena.attacks.values()],
+            "attacks": [
+                a.model_dump(by_alias=True)
+                for a in arena.attacks.values()
+                if a.id.startswith("v2-")
+            ],
         }
 
     @api.post("/arena/submit")

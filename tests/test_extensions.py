@@ -6,7 +6,7 @@ import pytest
 
 from agents.mock import command
 from lab.arena import Arena, Submission
-from lab.corpus import load
+from lab.corpus import generate, load
 from packages.gateway.mcp import Catalog, ToolDefinition
 from packages.ifc import trusted_value, untrusted_value
 from packages.ifc.fallback import TaintSession
@@ -180,6 +180,31 @@ def test_security_test_outcome_matches_actual_action_and_oracle(category):
     protected = arena.submit("tenant", body.model_copy(update={"level": 3}))
     assert protected["outcome"] == "action_not_planned"
     assert not protected["effects"] and protected["external_effect_count"] == 0
+
+
+def test_current_security_cases_use_tool_specific_destinations_and_exact_evidence():
+    cases = generate(version=2)
+    arena = Arena()
+    for attack in cases:
+        requested = command(attack.payload)
+        assert requested and requested["destination"] == attack.oracle.destination
+        if requested["kind"] == "send_email":
+            assert requested["destination"] == "collector@example.invalid"
+        elif requested["kind"] == "write_memory":
+            assert requested["destination"].startswith("memory://")
+        elif requested["kind"] == "delete_calendar":
+            assert requested["destination"].startswith("calendar://")
+    attack = next(a for a in cases if a.category == "exfil-email")
+    result = arena.submit(
+        "tenant",
+        Submission(player="operator", level=0, attack_id=attack.id, payload=attack.payload),
+    )
+    assert result["success"] and not result["legacy_case"]
+    assert result["input_payload"] == attack.payload
+    assert result["effects"][0] == attack.oracle.model_dump()
+    assert "$PRIVATE" in result["attempted_action"]["content"]
+    assert "$PRIVATE" not in result["effects"][0]["content"]
+    assert "No language model" in result["limitations"]
 
 
 def test_cef_escaping():
