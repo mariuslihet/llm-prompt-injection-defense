@@ -1,0 +1,97 @@
+{
+  "experiment": "evolutionary-fixture-campaign",
+  "seed": 42,
+  "budget": 16,
+  "population": 4,
+  "rows": [
+    {
+      "config": "none",
+      "successes": 504,
+      "trials": 504,
+      "asr": 1.0,
+      "ci95": [
+        0.992435712457162,
+        1
+      ],
+      "attempts": 504,
+      "benign": {
+        "tasks": 336,
+        "successes": 336,
+        "utility": 1.0,
+        "false_positives": 0,
+        "fpr": 0.0,
+        "utility_ci95": [
+          0.9886963208255265,
+          0.9999999999999999
+        ]
+      }
+    },
+    {
+      "config": "detector",
+      "successes": 504,
+      "trials": 504,
+      "asr": 1.0,
+      "ci95": [
+        0.992435712457162,
+        1
+      ],
+      "attempts": 1008,
+      "benign": {
+        "tasks": 336,
+        "successes": 312,
+        "utility": 0.9285714285714286,
+        "false_positives": 24,
+        "fpr": 0.07142857142857142,
+        "utility_ci95": [
+          0.8959204780846207,
+          0.9515335111944022
+        ]
+      }
+    },
+    {
+      "config": "detector-sanitizer",
+      "successes": 504,
+      "trials": 504,
+      "asr": 1.0,
+      "ci95": [
+        0.992435712457162,
+        1
+      ],
+      "attempts": 1008,
+      "benign": {
+        "tasks": 336,
+        "successes": 312,
+        "utility": 0.9285714285714286,
+        "false_positives": 24,
+        "fpr": 0.07142857142857142,
+        "utility_ci95": [
+          0.8959204780846207,
+          0.9515335111944022
+        ]
+      }
+    },
+    {
+      "config": "full-ifc",
+      "successes": 0,
+      "trials": 504,
+      "asr": 0.0,
+      "ci95": [
+        4.336808689942018e-19,
+        0.007564287542838142
+      ],
+      "attempts": 8064,
+      "benign": {
+        "tasks": 336,
+        "successes": 280,
+        "utility": 0.8333333333333334,
+        "false_positives": 0,
+        "fpr": 0.0,
+        "utility_ci95": [
+          0.7897640274987829,
+          0.8693668530515681
+        ]
+      }
+    }
+  ],
+  "limits": "Synthetic grammar and correlated templates only."
+}

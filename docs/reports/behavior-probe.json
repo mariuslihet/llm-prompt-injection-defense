@@ -1,0 +1,14 @@
+{
+  "experiment": "causal-model-behavior-probes",
+  "seed": 42,
+  "observations": 63,
+  "valid_actions": 0,
+  "followed": 0,
+  "train_classes": [
+    0
+  ],
+  "test_n": 21,
+  "probes": {},
+  "status": "not-trainable: only one observed training class",
+  "limits": "Small grouped fixture action-selection task; not natural agent ASR or a universal behavior probe."
+}

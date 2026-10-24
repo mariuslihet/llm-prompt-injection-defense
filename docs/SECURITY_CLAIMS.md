@@ -1,9 +1,9 @@
 # Tested security claims
 
 These are conditional software invariants for the finite interpreter and the
-two covered mock external tools. They do not claim to prevent prompt injection.
+two covered simulated external tools. They do not claim to prevent prompt injection.
 Trusted computing base: label-assigning adapters, Python runtime, immutable value
-operations, policy evaluator, interpreter, approval authority and mock sink.
+operations, policy evaluator, interpreter, approval authority and simulated sink.
 Direct modification of these components is outside the threat model.
 
 | ID | Claim | Test reference |
@@ -22,7 +22,7 @@ Induct on the bounded linear instruction sequence. Inputs obtain labels only
 from trusted adapters. Extract copies its input label. Concat joins labels with
 the least trust, greatest confidentiality and intersection of sink permissions.
 Neither operation can overwrite an existing variable. Call resolves immutable
-references and invokes the evaluator before adding a mock effect. The evaluator
+references and invokes the evaluator before adding a simulated effect. The evaluator
 checks exact argument shape, intrinsic sink identity, trust, URL allowlist,
 capability, confidentiality and invocation-wide untrusted control taint. A grant
 can bypass only the final approval barrier. It cannot bypass the preceding
@@ -31,13 +31,24 @@ trusted computing base and the correctness of the label assignment.
 
 The approval map is locked; consume atomically removes its token before checking
 binding/expiry. A failed reuse cannot find the grant. A canonical policy hash and
-canonical argument labels bind authorization to the reviewed action. Restart
-revokes every outstanding grant. This establishes C5 within one process.
+canonical argument labels bind authorization to the reviewed action. The in-memory Approvals implementation revokes grants on restart. The gateway
+uses transactional StateApprovals: token hashes, binding and expiry persist, and
+atomic consumption is tested across two SQLite connections
+(tests/test_persistence.py). Restart does not extend a grant or permit reuse.
 
 ## What the tests establish
 
 Hypothesis samples strings and sink sets; it does not mathematically prove all
 programs or detect every semantic leak. These arguments do not cover malicious
 trusted adapters, encoded secret inference, external tool implementations or
-distributed state. The gateway text proxy alone does not confer IFC: a client
+distributed multi-host state. The gateway text proxy alone does not confer IFC: a client
 must execute effects through the interpreter or the conservative taint fallback.
+
+## Model-driven MVP boundary
+
+The sample email runner dispatches only strict read_email/read_project/send_email/
+finish schemas; it has no real external tool handle. Its model-driven planner
+receives the trusted task without inbox content; quarantined output keeps its
+untrusted label. Hostile tool names, missing references and forged approvals
+fail closed in tests/test_email_agent.py. These are isolation and authorization
+contracts, not a claim that a model can reason reliably or resist every attack.

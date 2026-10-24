@@ -1,0 +1,10 @@
+{
+  "requests": 1000,
+  "concurrency": 16,
+  "transport": "loopback TCP HTTP/1.1",
+  "provider": "mock",
+  "p50_ms": 151.8065,
+  "p95_ms": 386.0555,
+  "errors": 0,
+  "limits": "Localhost mock only; no TLS, real inference or public deployment."
+}

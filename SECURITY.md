@@ -1,8 +1,8 @@
 # Responsible disclosure
 
 Do not test Mecha attacks against real third-party systems or users. Reproduce
-suspected issues only against local fake-data fixtures. Preserve the seed,
-policy digest, minimal payload, observed mock effects and regression test.
+suspected issues only against local sample-data fixtures. Preserve the seed,
+policy digest, minimal payload, observed simulated effects and regression test.
 Do not post credentials, PII or private prompt contents in a public issue.
 
 This local repository has no configured remote or disclosure address. Before a

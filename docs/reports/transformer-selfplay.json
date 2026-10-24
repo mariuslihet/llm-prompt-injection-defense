@@ -1,0 +1,91 @@
+{
+  "experiment": "bert-tiny-transformer-selfplay",
+  "seed": 42,
+  "rounds": [
+    {
+      "round": 0,
+      "experiment": "bert-tiny-calibrated-fixture-detector",
+      "seed": 42,
+      "data_sha256": "6ea2e75e927c7cb743aac620986d972f470f828defef8bd8a91f02f26d036824",
+      "model_sha256": "1828b0f19bea6044c1936c1c43045a4e93017ca0f0d7733a778c60fe8884a5ce",
+      "calibration": {
+        "threshold": 0.1809815774427185,
+        "fpr": 0.0,
+        "tpr": 1.0
+      },
+      "test_attack_n": 56,
+      "static_misses": 0,
+      "static_evasion_rate": 0.0,
+      "test_benign_n": 186,
+      "benign_fp": 2,
+      "benign_fpr": 0.010752688172043012,
+      "adaptive_trials": 56,
+      "adaptive_successes": 0,
+      "adaptive_evasion_rate": 0.0,
+      "attack_budget": 7,
+      "limits": "Synthetic templates; classification-evasion oracle, not real LLM agent ASR.",
+      "targets_available": [
+        "email-calendar",
+        "rag",
+        "web-research"
+      ]
+    },
+    {
+      "round": 1,
+      "experiment": "bert-tiny-calibrated-fixture-detector",
+      "seed": 42,
+      "data_sha256": "c717c4eba7e6c222d06ab26920bc8c41faa6d83ae107c9e899403e71c3f3d41d",
+      "model_sha256": "2115e68e0503cededb65727fe0cf781b6a5d25ae8852a2d4150b118973d42220",
+      "calibration": {
+        "threshold": 0.030568302677703857,
+        "fpr": 0.0,
+        "tpr": 1.0
+      },
+      "test_attack_n": 56,
+      "static_misses": 0,
+      "static_evasion_rate": 0.0,
+      "test_benign_n": 186,
+      "benign_fp": 2,
+      "benign_fpr": 0.010752688172043012,
+      "adaptive_trials": 56,
+      "adaptive_successes": 0,
+      "adaptive_evasion_rate": 0.0,
+      "attack_budget": 7,
+      "limits": "Synthetic templates; classification-evasion oracle, not real LLM agent ASR.",
+      "targets_available": [
+        "email-calendar",
+        "rag",
+        "web-research"
+      ]
+    },
+    {
+      "round": 2,
+      "experiment": "bert-tiny-calibrated-fixture-detector",
+      "seed": 42,
+      "data_sha256": "7d7b19cdcc8c8756c5481535cea6618e0d72d7f388b71fed5afbe2988473b645",
+      "model_sha256": "8d0e05a88920a2c084e5bc6c7f6de80f87ea858652047f7a640840aa32999775",
+      "calibration": {
+        "threshold": 0.0026236782537231444,
+        "fpr": 0.0,
+        "tpr": 1.0
+      },
+      "test_attack_n": 56,
+      "static_misses": 0,
+      "static_evasion_rate": 0.0,
+      "test_benign_n": 186,
+      "benign_fp": 6,
+      "benign_fpr": 0.03225806451612903,
+      "adaptive_trials": 56,
+      "adaptive_successes": 0,
+      "adaptive_evasion_rate": 0.0,
+      "attack_budget": 7,
+      "limits": "Synthetic templates; classification-evasion oracle, not real LLM agent ASR.",
+      "targets_available": [
+        "email-calendar",
+        "rag",
+        "web-research"
+      ]
+    }
+  ],
+  "limits": "Frozen grouped fixture splits and small mutation budget; not real agent robustness."
+}

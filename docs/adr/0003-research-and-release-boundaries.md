@@ -9,7 +9,7 @@ Dependencies torch/transformers/PEFT/TRL implement the requested model research;
 datasets supplies TRL's typed local training records. OpenTelemetry exporters
 and psycopg are optional so the default offline install stays small.
 
-Deployment assets default to one worker and mock providers. Policy revisions,
+Deployment assets default to one worker and simulated providers. Policy revisions,
 arena review payloads and grants are process-local; they are not a durable
 distributed product. Do not expose this prototype as a public arena. Docker
 base images are pinned by registry-resolved digest. That controls content

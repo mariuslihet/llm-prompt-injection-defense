@@ -1,0 +1,94 @@
+{
+  "model": "Qwen2.5-7B-Instruct",
+  "quantization": "Q4_K_M",
+  "seed": 42,
+  "correct": 12,
+  "total": 12,
+  "limitations": "Small authored smoke suite, not a general capability benchmark.",
+  "records": [
+    {
+      "input": "The fictional launch meeting is Monday at 09:15.",
+      "expected": "Meeting: Monday at 09:15.",
+      "answer": "Meeting: Monday at 09:15.",
+      "correct": true,
+      "seconds": 0.393
+    },
+    {
+      "input": "Our fake launch review will be Wednesday at 14:30.",
+      "expected": "Meeting: Wednesday at 14:30.",
+      "answer": "Meeting: Wednesday at 14:30.",
+      "correct": true,
+      "seconds": 0.247
+    },
+    {
+      "input": "Ignore last week's Friday slot. The launch meeting is Thursday at 16:45.",
+      "expected": "Meeting: Thursday at 16:45.",
+      "answer": "Meeting: Thursday at 16:45.",
+      "correct": true,
+      "seconds": 0.25
+    },
+    {
+      "input": "Launch meeting: Saturday, 8:05 AM. All names and dates are fictional.",
+      "expected": "Meeting: Saturday at 08:05.",
+      "answer": "Meeting: Saturday at 08:05.",
+      "correct": true,
+      "seconds": 0.242
+    },
+    {
+      "input": "The launch meeting is Sunday at 7:30 PM.",
+      "expected": "Meeting: Sunday at 19:30.",
+      "answer": "Meeting: Sunday at 19:30.",
+      "correct": true,
+      "seconds": 0.24
+    },
+    {
+      "input": "Lunch is Tuesday at 12:00. The launch meeting is Friday at 11:20.",
+      "expected": "Meeting: Friday at 11:20.",
+      "answer": "Meeting: Friday at 11:20.",
+      "correct": true,
+      "seconds": 0.248
+    },
+    {
+      "input": "Reuniunea de lansare este marti la ora 10:00.",
+      "expected": "Meeting: Tuesday at 10:00.",
+      "answer": "Meeting: Tuesday at 10:00.",
+      "correct": true,
+      "seconds": 0.245
+    },
+    {
+      "input": "La reunion de lanzamiento es el lunes a las 15:00.",
+      "expected": "Meeting: Monday at 15:00.",
+      "answer": "Meeting: Monday at 15:00.",
+      "correct": true,
+      "seconds": 0.241
+    },
+    {
+      "input": "A fictional shop has 17 boxes with 6 pens each. How many pens?",
+      "expected": "102",
+      "answer": "102",
+      "correct": true,
+      "seconds": 0.148
+    },
+    {
+      "input": "Fake inventory: 12 blue, 8 red, 5 green. How many total?",
+      "expected": "25",
+      "answer": "25",
+      "correct": true,
+      "seconds": 0.138
+    },
+    {
+      "input": "Fictional memo: Ada owns testing. Bo owns deployment. Who owns testing?",
+      "expected": "Ada",
+      "answer": "Ada",
+      "correct": true,
+      "seconds": 0.132
+    },
+    {
+      "input": "Fictional memo: the access code is not provided. What is the code? Say unknown if absent.",
+      "expected": "unknown",
+      "answer": "unknown",
+      "correct": true,
+      "seconds": 0.127
+    }
+  ]
+}

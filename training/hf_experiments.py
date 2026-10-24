@@ -26,12 +26,19 @@ def validate_rows(path: Path) -> list[dict[str, object]]:
     return rows
 
 
-def run(kind: str, model_path: Path, data: Path, output: Path, seed: int = 42) -> dict[str, object]:
+def run(
+    kind: str, model_path: Path, data: Path, output: Path, seed: int = 42, max_steps: int = 4
+) -> dict[str, object]:
     if not model_path.is_dir() or output.exists():
         raise ValueError("existing local model and fresh output directory required")
+    if not 1 <= max_steps <= 256:
+        raise ValueError("training step budget must be between 1 and 256")
     rows = validate_rows(data)
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["HF_DATASETS_OFFLINE"] = "1"
+    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+    os.environ["DO_NOT_TRACK"] = "1"
     import torch
     from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer, set_seed
 
@@ -123,20 +130,26 @@ def run(kind: str, model_path: Path, data: Path, output: Path, seed: int = 42) -
 
         def preference_logp(row, completion):
             prefix = tokenizer(
-                str(row["prompt"]), return_tensors="pt", truncation=True, max_length=256
-            )["input_ids"]
-            full = tokenizer(
-                str(row["prompt"]) + str(completion),
+                str(row["prompt"]),
                 return_tensors="pt",
                 truncation=True,
-                max_length=512,
-            )
-            labels = full["input_ids"].clone()
+                max_length=256,
+                add_special_tokens=False,
+            )["input_ids"]
+            suffix = tokenizer(
+                str(completion),
+                return_tensors="pt",
+                truncation=True,
+                max_length=128,
+                add_special_tokens=False,
+            )["input_ids"]
+            ids = torch.cat((prefix, suffix), dim=1)
+            labels = ids.clone()
             labels[:, : prefix.shape[1]] = -100
             if (labels != -100).sum().item() == 0:
                 raise ValueError("empty or truncated preference completion")
             with torch.no_grad():
-                return -float(model(**full, labels=labels).loss)
+                return -float(model(input_ids=ids, labels=labels).loss) * int(suffix.shape[1])
 
         def preferences():
             model.eval()
@@ -163,6 +176,12 @@ def run(kind: str, model_path: Path, data: Path, output: Path, seed: int = 42) -
                 per_device_train_batch_size=1,
                 report_to="none",
                 use_cpu=True,
+                save_strategy="no",
+                max_length=512,
+                learning_rate=5e-5,
+                max_steps=max_steps,
+                gradient_checkpointing=False,
+                per_device_eval_batch_size=1,
             ),
             train_dataset=Dataset.from_list(columns),
             processing_class=tokenizer,
@@ -179,6 +198,7 @@ def run(kind: str, model_path: Path, data: Path, output: Path, seed: int = 42) -
     report = {
         "experiment": kind,
         "seed": seed,
+        "max_steps": max_steps if kind == "dpo" else None,
         "local_model": str(model_path),
         "data_sha256": hashlib.sha256(data.read_bytes()).hexdigest(),
         "metrics": metrics,
@@ -194,8 +214,9 @@ def main() -> None:
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--max-steps", type=int, default=4)
     args = parser.parse_args()
-    print(json.dumps(run(args.kind, args.model, args.data, args.output)))
+    print(json.dumps(run(args.kind, args.model, args.data, args.output, max_steps=args.max_steps)))
 
 
 if __name__ == "__main__":

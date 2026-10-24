@@ -3,7 +3,7 @@
 The compiler uses YAML safe_load and pydantic with unknown fields forbidden.
 `version` identifies the authored policy; its canonical SHA-256 digest binds
 approvals to exact rules. `mode` is enforce or shadow. Shadow records what
-would be denied while retaining structural enforcement for mock effects.
+would be denied while retaining structural enforcement for simulated effects.
 
 Each rule declares `tool`, the exact `arguments` set, whether the tool is
 `external`, `trusted_arguments`, `url_arguments`, `allowed_hosts`, and
@@ -14,16 +14,15 @@ The default YAML is packages/policy/default.yaml.
 For an external call, every argument must include the tool in allowed_sinks,
 be public, and meet any per-argument trust/URL constraint. URLs require HTTPS,
 an exact host match, no credentials, and default/443 port. Host allowlisting
-does not itself solve DNS rebinding; mock tools do not perform network I/O.
+does not itself solve DNS rebinding; simulated tools do not perform network I/O.
 All external calls after any untrusted input require approval. Approval never
 overrides private-data denial, destination taint or missing capabilities.
 
 API workflow: GET /policy -> POST /policy/stage with dry_run true -> stage with
 dry_run false -> review digest/revision -> POST /policy/promote. To roll back,
-promote a prior tenant revision. Each action is audited. Revisions currently
-live in memory; restart revokes staged edits. The PolicyStore class also
-accepts a SQLite file for future persistent deployments, but the gateway does
-not yet wire durable policy storage into production configuration.
+promote a prior tenant revision. Each action is audited. Revisions and grants persist when MECHA_STATE_PATH names a SQLite file.
+Promotion is transactional; grants remain bound to the exact policy digest and
+expire within 300 seconds. In-memory configuration resets state on restart.
 
 Static verification rejects known external tools mislabeled as internal,
 untrusted destination paths, and missing approval barriers. Run

@@ -1,10 +1,12 @@
 # Self-hosting, backup and upgrades
 
 The supported verified path is a single local Python gateway and Vite console.
-Keep the gateway on loopback, use fake data, and keep model tools behind IFC.
-Do not expose the current arena publicly. Current grants, policy edits, limits,
-leaderboard and review payloads reset on restart. Only the configured SQLite
-audit is durable. No PostgreSQL migration/shared state service is implemented.
+Keep the gateway on loopback, use sample data, and keep model tools behind IFC.
+Do not expose the current arena publicly. SQLite state persists tenant keys
+(as hashes), expiring grants, policy revisions, jobs, leaderboard and sample-data
+review payloads. Configure BOTH MECHA_STATE_PATH and MECHA_AUDIT_PATH and back
+up both files. There is no PostgreSQL migration/shared multi-host service.
+See docs/MVP.md for the production startup guards and same-origin console.
 
 Docker assets: copy .env.example to .env, then run
 `docker compose -f deploy/docker/compose.yaml up --build`.
@@ -28,10 +30,10 @@ configuration. Helm and Kubernetes were unavailable here; templates are untested
 GVisor requires Linux, Docker configured with the runsc runtime, a pre-pulled
 digest-pinned image, and MECHA_ENABLE_ISOLATION=1. `GVisor.run` has no fallback
 to a weaker runtime and disables networking, mounts, host sockets and inherited
-environment. Timeout returns an error, not trusted output. The current runner
-does not implement a bounded streaming output collector or guaranteed cleanup
-after a host crash; it is not ready to accept public hostile code. Firecracker
-and a DNS-pinned forwarding egress proxy remain unimplemented.
+environment. Timeout returns an error, not trusted output. The runner bounds collected output, enforces a timeout and attempts forced
+container cleanup. Host crash recovery and live Linux isolation remain unverified.
+A DNS-pinned HTTPS egress transport is implemented and tested with simulated transports, but has no
+live deployment verification. Firecracker is unimplemented.
 
 ## Backup / restore
 
@@ -48,5 +50,5 @@ the local chain cannot detect total database replacement.
 Stop the single worker, snapshot the audit, preserve tenant config outside Git,
 review changed policy digests and SECURITY_CLAIMS, then install with uv sync
 --frozen. Run tests, corpus regression gate, and backup/restore verification
-before resuming. Outstanding grants are revoked by restart. No database schema
+before resuming. Outstanding grants persist with their original binding and expiry. No database schema
 migration automation or rolling distributed upgrade is certified.

@@ -1,13 +1,26 @@
 # Mecha
 
 An offline-first prompt-injection defense research platform. The loop connects
-fake-data agents, an adaptive attack lab, structural information-flow control,
+sample-data agents, an adaptive attack lab, structural information-flow control,
 and reproducible evaluation. **It does not claim to prevent prompt injection.**
 
 Current status: working local research prototype. All six phases have tracked
 implementation work; the project-level definition of done is **not met**.
 See [acceptance status](docs/ACCEPTANCE.md), [tested claims](docs/SECURITY_CLAIMS.md)
 and [limitations](docs/LIMITATIONS.md) before using it as a security boundary.
+
+## Private MVP
+
+For the model-driven email agent, adaptive attacker, saved runs and execution
+timelines, use the [MVP runbook](docs/MVP.md). The fixture Arena remains a
+separate deterministic contract demo. The repository remains private and
+production acceptance is still open.
+
+The private Windows setup now uses **Qwen2.5-7B-Instruct on the local GPU**.
+After acquiring the verified model and building the console as described in the
+runbook, start both services with `./deploy/start-local.ps1`, then open
+http://127.0.0.1:8000 and select **Agent Lab**. Actual results and remaining gaps
+are recorded in [the current handoff report](docs/reports/FINAL.md).
 
 ## Quickstart
 
@@ -23,10 +36,10 @@ uv run mecha evaluate --output artifacts/eval
 uv run mecha gate artifacts/eval.json
 ```
 
-The demo prints a successful fake-canary email effect on the vulnerable target
+The demo prints a successful test-canary email effect on the vulnerable target
 and no unauthorized effect under IFC. On systems with Make, `make demo-attack`
-does the same. Open `artifacts/eval.html` to inspect the comparison. The clone
-URL is unset because no remote has been configured for this local repository.
+does the same. Open `artifacts/eval.html` to inspect the comparison. Use your authorized private repository URL; no publication or push is performed
+by the local setup.
 
 Start the gateway:
 
@@ -45,9 +58,9 @@ npm run dev
 ```
 
 Open [the local console](http://127.0.0.1:5173), enter `fake-local-demo-key`, and
-connect. The example grants local admin access for fake-data demos. Generate
+connect. The example grants local admin access for sample-data demos. Generate
 new server keys and review the deployment guide before other use. Example keys
-are intentionally fake and are never automatically enabled by the application.
+are intentionally sample and are never automatically enabled by the application.
 
 For a text-subset proxy request:
 
@@ -76,10 +89,10 @@ permit that OS mechanism. No test invokes a real provider, DNS or a real tool.
 
 ## Measured fixture results
 
-168 synthetic attacks, three mock targets, 336 benign fixture tasks, seed 42.
+168 synthetic attacks, three simulated targets, 336 normal-task fixture tasks, seed 42.
 These are contract tests of a synthetic grammar, **not real-model efficacy**.
 
-| Defense | Static ASR | Adaptive ASR | Benign utility |
+| Defense | Static ASR | Adaptive ASR | Normal-task utility |
 | --- | --- | --- | --- |
 | None / prompt hardening | 100% | 100% | 100% |
 | Detector | 0% | 100% | 92.86% |
@@ -99,5 +112,5 @@ which costs utility. The detector's known adaptive bypass is a regression fixtur
 - [Contributing](CONTRIBUTING.md), [responsible disclosure](SECURITY.md)
 - [Current handoff report](docs/reports/FINAL.md)
 
-All attacks target only code in this repository with mock effects, reserved
-example domains and fake credentials. Do not target third-party systems.
+All attacks target only code in this repository with simulated effects, reserved
+example domains and sample credentials. Do not target third-party systems.

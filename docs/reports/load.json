@@ -3,7 +3,7 @@
   "concurrency": 32,
   "transport": "in-process ASGI, no sockets",
   "provider": "mock",
-  "p50_ms": 1.1435,
-  "p95_ms": 1.3046,
+  "p50_ms": 22.400750000000002,
+  "p95_ms": 27.3668,
   "note": "Total fast-path request duration; excludes network, TLS and real inference."
 }

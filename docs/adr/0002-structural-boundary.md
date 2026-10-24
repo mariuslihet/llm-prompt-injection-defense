@@ -11,7 +11,10 @@ Untrusted destinations can never receive capability through approval. Human
 approval only clears the after-untrusted-read barrier for otherwise permitted
 arguments. This is stricter than declassification and may reduce utility.
 
-Shadow mode records decisions without allowing forbidden mock effects. There
+Shadow mode records decisions without allowing forbidden simulated effects. There
 is no production rollout switch that disables structural invariants. Current
 approvals are request-process local; restart revokes them. A distributed
 deployment requires a transactional shared grant store before enabling writes.
+
+Storage update: ADR-0004 supersedes the process-local grant implementation.
+The gateway now uses durable, transactional SQLite grant consumption.

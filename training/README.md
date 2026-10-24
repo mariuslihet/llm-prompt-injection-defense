@@ -1,6 +1,6 @@
 # Research experiments
 
-All inputs must be fake-data fixtures. No script enables tool execution from
+All inputs must be sample-data fixtures. No script enables tool execution from
 model output. Heavy model research is optional; model assets must exist locally.
 
 Run the measured inexpensive baseline:
@@ -16,27 +16,30 @@ held out. The committed result shows complete held-out failure despite training
 improvement. This is an overfitting demonstration, not the requested transformer
 self-play experiment. It writes JSON and an SVG plot.
 
-Optional transformer research:
+Optional transformer research was executed locally. Model revision/file hashes
+are in docs/reports/*-model-manifest.json; weights and trained artifacts remain
+ignored under artifacts/. Install with `uv sync --frozen --extra research`.
+Training/inference always uses local_files_only and trust_remote_code=false.
 
+```sh
+uv run --extra research python -m training.data --output artifacts/training
+uv run --extra research python -m training.hf_experiments classifier --model artifacts/models/bert-tiny --data artifacts/training/classifier.jsonl --output artifacts/classifier-fresh
+uv run --extra research python -m training.transformer_selfplay --model artifacts/classifier-calibrated-42/model --data artifacts/training/classifier.jsonl --output artifacts/selfplay-fresh --rounds 2
+uv run --extra research python -m training.bounded_data artifacts/training/hierarchy.jsonl artifacts/training/hierarchy-bounded.jsonl
+uv run --extra research python -m training.hf_experiments dpo --model artifacts/models/smollm2-135m --data artifacts/training/hierarchy-bounded.jsonl --output artifacts/dpo-fresh --max-steps 4
+uv run --extra research python -m training.behavior_probe --model artifacts/models/smollm2-135m --output artifacts/behavior-probe-fresh
+uv run --extra multimodal python -m training.hidden_channels --output artifacts/hidden-channels-fresh
 ```
-uv sync --extra research
-uv run python -m training.hf_experiments classifier --model PATH_TO_LOCAL_MODEL --data artifacts/training/classifier.jsonl --output artifacts/classifier-run
-uv run python -m training.hf_experiments dpo --model PATH_TO_LOCAL_CAUSAL_MODEL --data artifacts/training/hierarchy.jsonl --output artifacts/dpo-run
-```
 
-Use a fresh output directory. Scripts never download weights, enable remote
-code or execute generated code. Classifier training reports attack misses and
-benign false positives before/after two epochs. DPO uses LoRA for one CPU epoch
-and compares held-out security/general preference likelihoods. These preference
-metrics do not measure tool-agent ASR or general capability comprehensively.
+Use fresh output paths. See docs/reports/phase-4.md for the measured results and
+negative findings. Classifier training is not real-agent ASR. DPO preference
+likelihoods are not a comprehensive capability benchmark. The behavior-probe
+run produced no valid actions and could not train either probe; no accuracy is
+claimed. Hidden PDF/PNG metadata experiments do not perform OCR.
 
-Probe inputs must include observed model-behavior labels for whether the model
-followed an instruction from untrusted data. Do not reuse presence-of-injection
-labels and call them behavior probes. Pass the observed fixture JSONL to the
-`probe` subcommand with a local base model. It extracts last-token activations
-and trains a linear classifier; MLP comparison and causal behavior validation
-remain pending. No model assets were available for these three runs, so their
-status is **not run**, not zero ASR or zero accuracy.
+For the model-driven natural-language email agent and adaptive attacker, see
+[the private MVP runbook](../docs/MVP.md). The deterministic fixture corpus and
+live-model evidence are reported separately.
 
 Primary references: [CaMeL paper](https://arxiv.org/abs/2503.18813) and
 [research artifact](https://github.com/google-research/camel-prompt-injection),

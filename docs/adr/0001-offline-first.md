@@ -6,7 +6,7 @@ this keeps cross-package label types consistent during initial development.
 All default providers and tools are deterministic and local. Network-backed
 providers and training remain opt-in and cannot replace acceptance evidence.
 Generate attack data with diverse templates and store the expanded records;
-do not call template variants independent real-world attacks. No mock may
+do not call template variants independent real-world attacks. No simulation may
 claim to implement Firecracker, trained classifiers or upstream benchmarks.
 
 Dependencies: FastAPI/uvicorn serve the gateway; pydantic validates untrusted

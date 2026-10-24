@@ -8,7 +8,7 @@ These are synthetic fixture commands wrapped in varied attack presentations,
 not 168 independently validated natural-language jailbreaks.
 
 Measured locally with `python -m pytest tests/test_foundations.py`: 3 passed.
-Tests replay every attack on each agent and require exact matching mock effects.
+Tests replay every attack on each agent and require exact matching simulated effects.
 
 | Target | Successes / trials | Baseline ASR |
 | --- | --- | --- |

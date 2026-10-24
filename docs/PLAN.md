@@ -2,15 +2,30 @@
 
 Status: implementation started; no phase is certified complete yet.
 
+## Private MVP increment (2026-10-24)
+
+1. Replace fixture-only evidence with a natural-language email agent, strict
+   model action loop, sample private memo and observable sample email effects.
+2. Compare baseline, prompt hardening, detector, detector + sanitizer and IFC;
+   run an adaptive model attacker with explicit call/turn/time budgets and
+   paired normal-task cases. Invalid model outputs are measured as errors.
+3. Add authenticated durable background jobs, tenant-scoped status/results,
+   cancellation, restart recovery, queue bounds and a dashboard run interface.
+4. Harden provider configuration/response bounds, startup validation, API
+   errors, browser headers, readiness and operational documentation.
+5. Run local contracts, coverage, builds, dependency checks and a real local
+   model smoke. Update acceptance status honestly. Keep publication and live
+   Linux verification deferred per operator choice. ADR-0007 defines scope.
+
 ## Milestones and acceptance gates
 
-0. Foundations: three fake-data vulnerable agents, versioned corpus of at least
+0. Foundations: three sample-data vulnerable agents, versioned corpus of at least
    150 attacks, deterministic effect oracles, reproducible baseline, and an
-   end-to-end mock exfiltration demo. Gate: offline unit/integration tests and
-   baseline report. Synthetic ASR describes the mock only.
+   end-to-end simulated exfiltration demo. Gate: offline unit/integration tests and
+   baseline report. Synthetic ASR describes the simulated only.
 1. Gateway: authenticated tenant proxy, streaming, hooks, limits, labeled
    context, detectors, sanitizers and chained audits. Gate: measured latency,
-   ASR and at least 300 benign tasks. A heuristic is not a trained classifier.
+   ASR and at least 300 normal-task tasks. A heuristic is not a trained classifier.
 2. Structural control: propagating labels, restricted planner interpreter,
    quarantined extraction, capabilities, per-argument policy, approvals and
    static verification. Gate: property tests for explicit claims, denied
@@ -35,13 +50,13 @@ layout without an extra sentry directory (ADR-0001).
 
 ## Risks
 
-- A deterministic vulnerable mock can overstate defense efficacy; report it as
+- A deterministic vulnerable simulated can overstate defense efficacy; report it as
   a contract test, not evidence of robustness on real LLMs.
 - Value provenance can be lost through implicit control flow; conservatively
   join labels and authorize every sink inside the interpreter.
 - Approvals can become confused-deputy bypasses; bind to tenant, arguments,
   policy version, expiry and a single use.
-- Sanitization/detection can destroy utility; measure benign tasks per layer.
+- Sanitization/detection can destroy utility; measure normal-task tasks per layer.
 - Real model training, upstream benchmarks and OS isolation require optional
   downloads, hardware and host capabilities; never claim them from mocks.
 - CI configuration is not evidence that hosted CI ran successfully.
@@ -49,5 +64,5 @@ layout without an extra sentry directory (ADR-0001).
 ## Open questions
 
 Production deployment domain, identity provider, GPU budget and public arena
-hosting remain unset. Defaults use loopback, fake tenants and mock effects.
+hosting remain unset. Defaults use loopback, sample tenants and simulated effects.
 Resolve costly deployment decisions with the operator before public release.

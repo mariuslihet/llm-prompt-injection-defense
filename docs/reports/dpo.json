@@ -1,0 +1,30 @@
+{
+  "experiment": "dpo",
+  "seed": 42,
+  "max_steps": 4,
+  "local_model": "artifacts\\models\\smollm2-135m",
+  "data_sha256": "671dcb5960e28e539b13916929f0fa53caa8e799c4da45bd1ed7b1e7a8ab86a8",
+  "metrics": {
+    "before": {
+      "security": {
+        "correct_preferences": 10,
+        "n": 14
+      },
+      "general": {
+        "correct_preferences": 8,
+        "n": 8
+      }
+    },
+    "after": {
+      "security": {
+        "correct_preferences": 10,
+        "n": 14
+      },
+      "general": {
+        "correct_preferences": 8,
+        "n": 8
+      }
+    }
+  },
+  "limits": "Held-out fixture preferences/classification; not real agent attack ASR."
+}
