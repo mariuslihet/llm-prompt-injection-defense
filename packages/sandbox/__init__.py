@@ -1,10 +1,11 @@
 """Opt-in Linux gVisor tool runner. Fails if isolation is unavailable."""
 
+import asyncio
 import ipaddress
 import os
 import re
 import shutil
-import subprocess
+import uuid
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -40,13 +41,18 @@ class GVisor:
             raise ValueError("sandbox image must be pinned by digest")
         self.image = image
 
-    def command(self, argv: list[str]) -> list[str]:
+    def command(self, argv: list[str], name: str | None = None) -> list[str]:
         if not argv or len(argv) > 32 or sum(map(len, argv)) > 65536:
             raise ValueError("invalid sandbox command")
+        name = name or "mecha-" + uuid.uuid4().hex
+        if not re.fullmatch(r"mecha-[0-9a-f]{32}", name):
+            raise ValueError("invalid generated container name")
         return [
             "docker",
+            "--host=unix:///var/run/docker.sock",
             "run",
             "--rm",
+            "--name=" + name,
             "--pull=never",
             "--runtime=runsc",
             "--network=none",
@@ -62,7 +68,8 @@ class GVisor:
             *argv,
         ]
 
-    def run(self, argv: list[str], timeout: int = 10) -> SandboxResult:
+    @staticmethod
+    def _check(timeout: int) -> None:
         if (
             os.name != "posix"
             or os.getenv("MECHA_ENABLE_ISOLATION") != "1"
@@ -71,16 +78,54 @@ class GVisor:
             raise RuntimeError("Linux Docker with runsc and explicit opt-in required")
         if not 1 <= timeout <= 30:
             raise ValueError("sandbox timeout out of bounds")
-        # No shell, host mounts, sockets, env forwarding or fallback runtime.
-        process = subprocess.run(  # noqa: S603 -- explicit opt-in, shell=False, no host mounts
-            self.command(argv),
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-            env={"PATH": os.environ.get("PATH", "")},
+
+    def run(self, argv: list[str], timeout: int = 10) -> SandboxResult:
+        self._check(timeout)
+        return asyncio.run(self.arun(argv, timeout))
+
+    async def arun(self, argv: list[str], timeout: int = 10) -> SandboxResult:
+        self._check(timeout)
+        name = "mecha-" + uuid.uuid4().hex
+        environment = {"PATH": os.environ.get("PATH", "")}
+        process = await asyncio.create_subprocess_exec(
+            *self.command(argv, name),
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=environment,
         )
-        return SandboxResult(
-            process.returncode,
-            process.stdout[:65536].decode(errors="replace"),
-            process.stderr[:65536].decode(errors="replace"),
-        )
+
+        async def collect() -> bytes:
+            result = bytearray()
+            if process.stdout is None:
+                raise RuntimeError("sandbox output unavailable")
+            while chunk := await process.stdout.read(4096):
+                result.extend(chunk)
+                if len(result) > 65536:
+                    raise ValueError("sandbox output exceeds byte budget")
+            await process.wait()
+            return bytes(result)
+
+        try:
+            output = await asyncio.wait_for(collect(), timeout)
+            return SandboxResult(process.returncode or 0, output.decode(errors="replace"), "")
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+            # Killing the Docker CLI does not necessarily stop its container.
+            cleanup = await asyncio.create_subprocess_exec(
+                "docker",
+                "--host=unix:///var/run/docker.sock",
+                "rm",
+                "--force",
+                name,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+                env=environment,
+            )
+            try:
+                await asyncio.wait_for(cleanup.wait(), 5)
+            except TimeoutError:
+                cleanup.kill()
+                await cleanup.wait()

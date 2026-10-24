@@ -9,9 +9,12 @@ from pathlib import Path
 
 class Audit:
     def __init__(self, path: str = ":memory:") -> None:
+        self.persistent = path != ":memory:"
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, check_same_thread=False)
+        if path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
         self.lock = threading.Lock()
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, "
@@ -36,8 +39,11 @@ class Audit:
             "model",
             "count",
             "trace",
+            "severity",
         }:
             raise ValueError("non-metadata audit field")
+        if "severity" in event and event["severity"] not in {"low", "medium", "high"}:
+            raise ValueError("invalid decision severity")
         if "trace" in event:
             from packages.ifc.trace import ExecutionTrace
 
@@ -56,6 +62,9 @@ class Audit:
                     (tenant, encoded, previous, digest),
                 )
                 self.db.commit()
+                from packages.telemetry.otel import emit
+
+                emit(event)
                 return digest
             except Exception:
                 self.db.rollback()

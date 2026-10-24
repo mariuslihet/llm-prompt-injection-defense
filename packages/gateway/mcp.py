@@ -22,12 +22,26 @@ class ToolDefinition(BaseModel):
 
 
 class Catalog:
-    def __init__(self, pins: dict[str, str], permissions: dict[str, frozenset[str]]) -> None:
+    def __init__(
+        self,
+        pins: dict[str, str],
+        permissions: dict[str, frozenset[str]],
+        trusted_signers: dict[str, bytes] | None = None,
+    ) -> None:
         self.pins, self.permissions = pins.copy(), permissions.copy()
         self.tools: dict[str, ToolDefinition] = {}
         self.names: dict[str, str] = {}
+        self.signers = None if trusted_signers is None else trusted_signers.copy()
 
-    def register(self, definition: ToolDefinition) -> str:
+    def register(self, definition: ToolDefinition, signature: str = "") -> str:
+        if self.signers is not None:
+            from packages.telemetry.signing import verify_signature
+
+            public_key = self.signers.get(definition.server)
+            if public_key is None or not verify_signature(
+                definition.digest.encode(), signature, public_key
+            ):
+                raise ValueError("untrusted MCP definition signature")
         key = f"{definition.server}/{definition.name}"
         expected = self.pins.get(key, "")
         if not hmac.compare_digest(expected, definition.digest):
