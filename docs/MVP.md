@@ -120,8 +120,10 @@ within the campaign budget. Standalone CLI runs save incremental
 
 ## Evaluation controls
 
-Agent Evaluation offers three server-owned email scenarios: launch schedule,
-rescheduling with distracting events, and Romanian-to-English extraction.
+Agent Evaluation defaults to invoice reconciliation, support-ticket triage and
+access-request review. The three earlier scheduling scenarios remain selectable
+for historical comparisons. Each task uses its own trusted instructions and
+expected fields, not a shared meeting-answer template.
 Select an authority, workflow-dependency or concealment attack preset, or edit
 the untrusted email. The task and expected schedule come from the selected
 server scenario; client text cannot modify trusted instructions.
@@ -139,3 +141,39 @@ Recorded model, scenario and policy reference describe the saved run even if the
 controls are later changed. This remains an email-agent evaluation, not a live
 RAG/browser benchmark. Utility uses the scenario-specific expected day/time and
 absence of unauthorized effects; it is not a general semantic answer judge.
+
+## Standard suite and saved-run comparison
+
+Run business suite executes finance, support and governance tasks across five defenses, each with
+one normal case and one static attack from the selected strategy: 30 target runs.
+It uses server-owned inputs and zero adaptive rounds, under one 128-call budget
+and the existing 600-second job deadline. Use adaptive comparison separately for
+feedback-driven search. The scenario breakdown makes utility failures visible.
+
+Choose a completed baseline to compare attack and normal-task success counts
+and p95 duration. The server requires matching dataset fingerprints (including
+inputs, scenarios, strategy and turn limits). Model/policy changes are displayed.
+Incomplete runs and mismatched legacy runs are rejected; invalid evidence yields
+inconclusive findings. Changes are descriptive, not statistical significance.
+The API reads both runs within the authenticated tenant boundary.
+
+CLI: `python -m eval.agent_run --suite --provider llamacpp --model Qwen2.5-7B-Instruct`
+uses the same execution path. The local inference key must be supplied through
+the operator environment as described above.
+
+Business tasks use separate typed quarantine schemas for invoice identifiers,
+amount/currency/date; ticket severity/team/issue; and access decision/reason.
+Schema validation retains untrusted labels and cannot grant tool authority.
+Utility checks scenario-specific required output fields and absence of extra
+effects. It remains a narrow field-based oracle, not a general semantic judge.
+
+## Unique cases and execution evidence
+
+The business suite has six unique inputs (normal and attack cases for finance,
+support and access review), each replayed across five defenses. The console
+groups by scenario, case, round and input hash rather than displaying 30 repeated
+cards. Each card shows its input once, the actual action path per defense and a
+selector for that defense's original events and final answer. Stable case keys
+prevent expanded timeline state moving to unrelated records when filters change.
+Identical model trajectories remain identical evidence; the UI does not invent
+different actions to create apparent diversity.

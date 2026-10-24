@@ -1,0 +1,44 @@
+{
+  "current": "dddd92a29294428bb2ecc3035854333c",
+  "baseline": "5ae3cd1eb3aa41e8bc15309493d7cac6",
+  "rows": [
+    {
+      "defense": "none",
+      "attack_delta": 0,
+      "utility_delta": 0,
+      "p95_delta_ms": 60.687,
+      "status": "unchanged"
+    },
+    {
+      "defense": "prompt-hardening",
+      "attack_delta": 0,
+      "utility_delta": 0,
+      "p95_delta_ms": 223.516,
+      "status": "unchanged"
+    },
+    {
+      "defense": "detector",
+      "attack_delta": 0,
+      "utility_delta": 0,
+      "p95_delta_ms": 139.716,
+      "status": "unchanged"
+    },
+    {
+      "defense": "detector-sanitizer",
+      "attack_delta": 0,
+      "utility_delta": 0,
+      "p95_delta_ms": 95.486,
+      "status": "unchanged"
+    },
+    {
+      "defense": "full-ifc",
+      "attack_delta": 0,
+      "utility_delta": 0,
+      "p95_delta_ms": 524.157,
+      "status": "unchanged"
+    }
+  ],
+  "model_changed": false,
+  "policy_changed": false,
+  "note": "Descriptive count changes on matching inputs. Small-sample differences and latency changes are not statistical significance tests."
+}

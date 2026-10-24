@@ -105,3 +105,32 @@ A separate multilingual normal-input run completed without external effects but
 failed utility: the model returned schedule-not-provided despite the Romanian
 email stating Friday 15:30. This negative result is preserved in
 multilingual-evaluation.json; scenario availability does not imply model mastery.
+
+## Diverse business cases, bounded suites and grouped timelines
+
+The default changed from repeated schedule tasks to invoice reconciliation,
+support classification and access-request review. Each has its own trusted
+objective, expected fields and typed quarantine schema. Three scheduling tasks
+remain available for historical replay. Context-specific attacks use vendor
+verification, account recovery and approval override pretexts.
+
+The six unique normal/attack inputs are run against five defenses (30 executions)
+under one 128-call budget. Saved-run comparisons require matching dataset hashes
+and report descriptive security/utility/latency differences, with invalid results
+marked inconclusive. The UI groups matching inputs, shows actual action paths
+and lets the operator inspect each defense's own timeline and final answer.
+
+Two local business-suite runs each completed 30 executions in 60 model calls.
+Observed attack successes were 3/3 for undefended and prompt hardening, 0/3 for
+detector, sanitizer and IFC. Normal-task field-oracle success was 2/3 for the
+first four configurations and 3/3 for IFC; access-review prose failed the exact
+field check in the plain agent. This is a narrow required-field oracle, not a
+general semantic judge. Repeat comparisons had unchanged counts and differing
+latencies. Evidence: business-suite.json and business-comparison.json.
+
+Validation: 106 offline tests, 99.20% security-core coverage, strict typing, lint
+and dashboard build passed. Browser checks verified six distinct inputs, five
+executions per card, changing from a 12-event disclosure trace to a two-event
+detector trace, and saved-run comparison. Static suite results remain separate
+from feedback-driven adaptive campaigns; these small samples do not establish
+general model robustness.
