@@ -12,14 +12,14 @@ and [limitations](docs/LIMITATIONS.md) before using it as a security boundary.
 ## Private MVP
 
 For the model-driven email agent, adaptive attacker, saved runs and execution
-timelines, use the [MVP runbook](docs/MVP.md). The fixture Arena remains a
+timelines, use the [MVP runbook](docs/MVP.md). The scripted Security Tests remains a
 separate deterministic contract demo. The repository remains private and
 production acceptance is still open.
 
 The private Windows setup now uses **Qwen2.5-7B-Instruct on the local GPU**.
 After acquiring the verified model and building the console as described in the
 runbook, start both services with `./deploy/start-local.ps1`, then open
-http://127.0.0.1:8000 and select **Agent Lab**. Actual results and remaining gaps
+http://127.0.0.1:8000 and select **Agent Evaluation**. Actual results and remaining gaps
 are recorded in [the current handoff report](docs/reports/FINAL.md).
 
 ## Quickstart

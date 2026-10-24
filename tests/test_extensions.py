@@ -166,6 +166,22 @@ def test_management_policy_arena_and_mcp_endpoints():
         assert c.get("/export/cef", headers=HEADERS).json()["events"]
 
 
+@pytest.mark.parametrize("category", ["tool-abuse", "memory-poisoning", "exfil-email"])
+def test_security_test_outcome_matches_actual_action_and_oracle(category):
+    arena = Arena()
+    attack = next(a for a in load() if a.category == category)
+    body = Submission(player="operator", level=0, attack_id=attack.id, payload=attack.payload)
+    result = arena.submit("tenant", body)
+    assert result["outcome"] == "attack_succeeded"
+    assert result["oracle"] == attack.oracle.model_dump()
+    assert result["effects"][0] == result["oracle"]
+    assert result["external_effect_count"] == (1 if category == "exfil-email" else 0)
+    assert result["execution_mode"] == "deterministic_regression"
+    protected = arena.submit("tenant", body.model_copy(update={"level": 3}))
+    assert protected["outcome"] == "action_not_planned"
+    assert not protected["effects"] and protected["external_effect_count"] == 0
+
+
 def test_cef_escaping():
     assert cef({"action": "block|bad\n", "rule": "a=b"}).endswith(r"action=block\|bad  rule=a\=b")
 

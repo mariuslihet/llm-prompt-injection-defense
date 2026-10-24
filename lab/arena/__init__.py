@@ -66,6 +66,15 @@ class Arena:
             raise ValueError("use a mutation of the selected sample-data test case")
         result = defend(body.agent, body.payload, LEVELS[body.level])
         success = attack.oracle.succeeds(result)
+        outcome = (
+            "attack_succeeded"
+            if success
+            else "blocked"
+            if "heuristic block" in result.decisions
+            else "action_not_planned"
+            if LEVELS[body.level] == "full-ifc"
+            else "goal_not_observed"
+        )
         digest = hashlib.sha256(body.payload.encode()).hexdigest()
         with self.lock, self.db:
             self.db.execute("BEGIN IMMEDIATE")
@@ -88,6 +97,16 @@ class Arena:
                 )
         return {
             "success": success,
+            "outcome": outcome,
+            "execution_mode": "deterministic_regression",
+            "category": attack.category,
+            "goal": attack.goal,
+            "expected_harm": attack.expected_harm,
+            "oracle": attack.oracle.model_dump(),
+            "payload_sha256": digest,
+            "external_effect_count": sum(
+                effect.kind in {"send_email", "fetch_url"} for effect in result.effects
+            ),
             "level": body.level,
             "defense": LEVELS[body.level],
             "agent": body.agent,
@@ -101,7 +120,8 @@ class Arena:
                 "into a simulated tool action."
                 if success
                 else "The trusted program only summarized the untrusted document. "
-                "It never requested an email action."
+                "It never requested an email action or another external action. "
+                "This case tests a fixed summary program, not an adaptive model planner."
                 if LEVELS[body.level] == "full-ifc"
                 else "The heuristic detector blocked this payload before the vulnerable agent ran."
                 if "heuristic block" in result.decisions

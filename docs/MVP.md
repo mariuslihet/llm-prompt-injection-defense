@@ -7,8 +7,8 @@ public exposure. Keep it private per the operator's 2026-10-24 decision.
 
 Single Python worker, local SQLite/WAL, tenant Bearer keys, same-origin console,
 bounded durable background jobs and sample email tools. The model decides tool
-actions from natural-language input. The model-driven Agent Lab is separate
-from the deterministic fixture Arena. Neither can send real emails, run a shell
+actions from natural-language input. The model-driven Agent Evaluation is separate
+from the deterministic scripted Security Tests. Neither can send real emails, run a shell
 or fetch attacker-controlled URLs. The gateway's text API does not automatically
 protect tools that a client executes outside Mecha.
 
@@ -43,7 +43,7 @@ The runtime uses a 4096-token context, one inference slot and bounded responses.
 Other hardware needs its own measured model/runtime configuration. The launcher
 refuses occupied ports; service logs are in artifacts/local-inference.
 
-In **Agent Lab**, choose a normal-task email or natural-language attack. Run one
+In **Agent Evaluation**, choose a normal-task email or natural-language attack. Run one
 configuration or the adaptive comparison. The page polls status, shows each
 model response, action, tool observation, policy trace and oracle outcome,
 and exports JSON evidence. Jobs survive restart; unfinished inference is marked

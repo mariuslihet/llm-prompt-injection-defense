@@ -52,3 +52,19 @@ detector blocks at levels one/two, and an internal summary at level three.
 The IFC trace did not plan an email; it must not be described as an email denial.
 Collector URLs render as text and are never fetched. Regression reference:
 `test_arena_evidence_distinguishes_block_from_no_planned_external_call`.
+
+## Security-test result correction
+
+Navigation now uses Incident Review, Security Policy, Security Tests, Agent
+Evaluation and Access Management. Security Tests explicitly identifies its
+deterministic execution mode and links to model-backed evaluation. Results
+distinguish observed attack objectives, detector blocks and actions absent from
+the fixed program. Memory/calendar effects are no longer labeled disclosures
+or counted as outbound actions. Input edits invalidate prior results; inputs
+are locked during comparison. Each result carries its objective, oracle and
+input digest. Existing API paths remain compatible.
+
+Validation: 95 offline tests and dashboard production build passed. Browser
+checks verified calendar versus email effect counts, four-defense comparisons
+and stale-result removal. This improves result correctness; it does not turn
+scripted regression cases into evidence of general model robustness.
