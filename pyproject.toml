@@ -30,7 +30,7 @@ include = ["packages*", "lab*", "agents*", "eval*", "training*"]
 
 [tool.setuptools.package-data]
 "packages.policy" = ["*.yaml"]
-"lab" = ["corpus/*.jsonl"]
+"lab" = ["corpus/*.jsonl", "corpus/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

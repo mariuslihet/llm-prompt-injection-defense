@@ -52,3 +52,17 @@ receives the trusted task without inbox content; quarantined output keeps its
 untrusted label. Hostile tool names, missing references and forged approvals
 fail closed in tests/test_email_agent.py. These are isolation and authorization
 contracts, not a claim that a model can reason reliably or resist every attack.
+
+## Record workflows and review queue
+
+Scenario tools have exact scoped identifiers, and IFC adapters expose only the
+scenario's read tools. Schema-valid extraction retains untrusted provenance; it
+does not guarantee correct facts. Record-channel integrity attacks succeeded in
+local model tests and are explicitly outside the authorization claims above.
+Tests: tests/test_record_workflows.py.
+
+Operator-originated approval reviews bind tenant, policy, arguments and labels;
+expiry, role checks, atomic claim and single-use grant consumption precede a
+simulated effect. Restart marks executing reviews interrupted without retry.
+Tests: tests/test_review_queue.py and tests/test_restore_rehearsal.py. This is
+a single-worker SQLite contract, not a distributed exactly-once guarantee.

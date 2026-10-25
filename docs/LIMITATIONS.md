@@ -45,3 +45,21 @@ isolation. The installed CPU model is not a production throughput guarantee.
 Production readiness is blocked by the open gates in docs/MVP.md. The durable
 Windows localhost concurrency-16 p95 target failed. No license/public release
 is added, as the operator chose to keep the repository private.
+
+## Record workflow validation (2026-10-25)
+
+The Qwen2.5-7B-Instruct local GPU runner now exercises distinct scoped read tools
+and isolated state changes. A locally authored 15/15 development/held-out split
+contains 30 task instances; inspecting held-out failures during development means
+it is not a pristine external validation set. Initial runs skipped required tools;
+completion now requires the sources and task schema within the same turn budget.
+No expected values are supplied by recovery prompts. Schema validity does not
+establish truth: full IFC suffered 2/3 answer-integrity successes in the new
+record-channel test, while blocking unauthorized tool authority. These results
+restrict the claims; they are not evidence of general integrity protection.
+
+The latest durable loopback load test recorded p95 348.90 ms at concurrency 16
+(1,000 requests, zero HTTP errors); the 50 ms end-to-end gate remains failed.
+Server-only p95 was 11.712 ms and cannot substitute for end-to-end acceptance.
+Restore rehearsal verified each SQLite snapshot independently, not an atomic
+cross-database recovery or a production service cutover.

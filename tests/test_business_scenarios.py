@@ -3,7 +3,7 @@ import json
 import pytest
 
 from agents.email import run_email
-from agents.scenarios import SCENARIOS, SUITE_SCENARIOS, attack_input
+from agents.scenarios import SCENARIOS, attack_input
 from packages.ifc import untrusted_value
 from packages.ifc.business import extract_business
 from tests.test_email_agent import POLICY, ScriptedProvider
@@ -31,7 +31,7 @@ ANSWERS = {
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("scenario_id", SUITE_SCENARIOS)
+@pytest.mark.parametrize("scenario_id", ("invoice", "support", "access"))
 async def test_distinct_business_tasks_keep_typed_results_untrusted_and_no_effects(scenario_id):
     class BusinessProvider(ScriptedProvider):
         async def complete(self, messages, model):

@@ -65,12 +65,12 @@ async def test_suite_executes_all_scenarios_with_shared_bounded_calls_and_snapsh
     assert len({id(r["run"]["events"]) for r in result["records"]}) == 30
     assert all(r["task"] and r["scenario_id"] for r in result["records"])
     assert len(result["scenario_results"]) == 3
-    assert result["model_calls"] <= 128
+    assert result["model_calls"] <= 180
     assert len(result["dataset_digest"]) == 64
     assert {r["scenario_id"] for r in result["records"]} == {
-        "invoice",
-        "support",
-        "access",
+        "finance-workflow",
+        "support-workflow",
+        "access-workflow",
     }
     assert progress[-1]["completed_runs"] == 30
     assert all(r["benign_trials"] == 3 and r["attack_trials"] == 3 for r in result["summary"])
@@ -99,5 +99,8 @@ async def test_suite_cannot_reset_call_budget_between_scenarios():
         "tenant",
         update,
     )
-    assert provider.calls == result["model_calls"] == 128
+    # Per scenario: two 16-call agents, two 8-call agents (static attacks blocked),
+    # and two invalid planner calls. Detector blocks consume no provider calls.
+    assert provider.calls == result["model_calls"] == 150
+    assert result["model_calls"] <= 240
     assert all(not row["conclusive"] for row in result["summary"])

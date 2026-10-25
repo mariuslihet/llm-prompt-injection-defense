@@ -68,3 +68,32 @@ GET /arena/pending exposes only the current admin tenant's sample-data queue.
 Python SDK start_agent, job and cancel_job wrap the job APIs. TypeScript
 startAgent and job return unknown JSON requiring caller validation. Provider
 exceptions are redacted; failed model runs appear explicitly in result records.
+
+
+## Review workspace API
+
+All routes require a tenant bearer key and enforce tenant isolation.
+
+| Endpoint | Role | Behavior |
+| --- | --- | --- |
+| GET /reviews | viewer/operator/admin | Latest 100 requests, role and current policy digest |
+| POST /reviews | operator/admin | Fixed tool/argument contract plus title (100), justification (1000), priority normal/high/urgent |
+| POST /reviews/{id}/notes | operator/admin | Add a nonempty note up to 1000 characters |
+| POST /reviews/{id}/withdraw | operator/admin | Withdraw an unexpired pending request with a note |
+| POST /reviews/{id}/decision | admin | Strict boolean approve plus optional note (1000); existing binding/expiry constraints apply |
+
+The console requires a decision note; the API keeps optional notes for backward
+compatibility. Request history is capped at 100 entries; comments reserve space
+for state transitions. Labels are assigned by the server. Titles, notes and
+priority cannot grant authority. Role attribution is tenant-role attribution, not
+individual identity. Reviews and exports contain sample data only.
+
+## Focused evaluation API
+
+POST /lab/jobs accepts an optional title (100 characters) and selected_defenses
+(list of 1–5 distinct supported names). Selection applies to campaign/suite runs;
+single-agent runs use defense. GET /lab/jobs includes title and kind; GET a job
+returns its saved spec for deliberate reuse. Campaigns retain 128 model calls;
+suites reserve 6 × selected-defense count × max(2, max_turns) calls. The 600-second
+deadline, tenant quotas and single-worker execution remain unchanged.
+Dataset fingerprints include the defense selection/order but exclude the title.

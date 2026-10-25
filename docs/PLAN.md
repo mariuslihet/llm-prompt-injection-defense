@@ -66,3 +66,23 @@ layout without an extra sentry directory (ADR-0001).
 Production deployment domain, identity provider, GPU budget and public arena
 hosting remain unset. Defaults use loopback, sample tenants and simulated effects.
 Resolve costly deployment decisions with the operator before public release.
+
+## Current increment — 2026-10-25
+
+1. Distinct scoped record workflows and typed state changes.
+2. Exfiltration, integrity and per-run memory attacks with structured outcomes.
+3. Versioned development/held-out cases and matched comparisons.
+4. Durable tenant-scoped human review of otherwise permitted actions.
+5. Local restore rehearsal and fresh durable-load measurements.
+
+Acceptance: offline regression/property checks, live local-model evidence and
+visible UI verification. Keep failures explicit and leave all changes unstaged.
+External Linux/deployment validation remains deferred.
+
+
+## Review and evaluation workspace expansion
+
+Implement bounded review metadata/history, notes and withdrawal; focused defense
+selection, named runs, saved-setup reuse, outcome/tool summaries and safe CSV
+exports. Verify tenant isolation, transitions and browser flows (ADR-0011).
+Keep all work local and unstaged; no new dependencies are needed.

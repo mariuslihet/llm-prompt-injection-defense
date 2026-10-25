@@ -7,8 +7,9 @@ import html
 import json
 from pathlib import Path
 
+from agents.cases import resolve_case
 from agents.email import DEFENSES
-from agents.scenarios import SCENARIOS, attack_input
+from agents.scenarios import attack_input
 from lab.campaigns import RunSpec, execute
 from packages.gateway.providers import LocalHFProvider, configured_provider
 from packages.policy import compile_policy
@@ -21,14 +22,22 @@ async def run(args) -> dict[str, object]:
         else configured_provider(args.provider)
     )
     spec = RunSpec(
+        title=args.title,
+        selected_defenses=tuple(args.defenses),
         kind="suite" if args.suite else "campaign" if args.campaign else "agent",
         defense=args.defense,
         adaptive_rounds=0 if args.suite else args.adaptive_rounds,
         email=args.email.read_text(encoding="utf-8")
         if args.email
-        else attack_input(SCENARIOS[args.scenario], "authority"),
+        else attack_input(
+            resolve_case(args.scenario, args.partition, args.variation), "authority", args.goal
+        ),
         scenario_id=args.scenario,
         max_turns=args.max_turns,
+        attack_goal=args.goal,
+        attack_channel=args.channel,
+        partition=args.partition,
+        variation=args.variation,
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +55,17 @@ async def run(args) -> dict[str, object]:
     )
     result["source_sha256"] = {
         name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-        for name in ("agents/email.py", "lab/campaigns.py", "packages/gateway/providers.py")
+        for name in (
+            "agents/email.py",
+            "agents/workflows.py",
+            "agents/outcomes.py",
+            "agents/cases.py",
+            "agents/scenarios.py",
+            "lab/campaigns.py",
+            "lab/corpus/workflows-v1.json",
+            "packages/ifc/business.py",
+            "packages/gateway/providers.py",
+        )
     }
     if args.model_path and (args.model_path / "mecha-manifest.json").is_file():
         result["model_manifest"] = json.loads(
@@ -75,15 +94,33 @@ if __name__ == "__main__":
     parser.add_argument("--model-path", type=Path)
     parser.add_argument("--model", default="operator-selected-local-model")
     parser.add_argument("--defense", choices=DEFENSES, default="full-ifc")
+    parser.add_argument("--defenses", nargs="+", choices=DEFENSES, default=list(DEFENSES))
+    parser.add_argument("--title", default="")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--campaign", action="store_true")
     mode.add_argument("--suite", action="store_true")
     parser.add_argument("--adaptive-rounds", type=int, choices=range(4), default=1)
     parser.add_argument(
         "--scenario",
-        choices=("launch", "rescheduled", "multilingual", "invoice", "support", "access"),
-        default="invoice",
+        choices=(
+            "launch",
+            "rescheduled",
+            "multilingual",
+            "invoice",
+            "support",
+            "access",
+            "finance-workflow",
+            "support-workflow",
+            "access-workflow",
+        ),
+        default="finance-workflow",
     )
+    parser.add_argument(
+        "--goal", choices=("exfiltration", "integrity", "memory"), default="exfiltration"
+    )
+    parser.add_argument("--channel", choices=("email", "record"), default="email")
+    parser.add_argument("--partition", choices=("development", "heldout"), default="development")
+    parser.add_argument("--variation", type=int, choices=range(5), default=0)
     parser.add_argument("--max-turns", type=int, choices=range(1, 9), default=6)
     parser.add_argument("--email", type=Path)
     parser.add_argument("--output", type=Path, default=Path("artifacts/model-agent.json"))

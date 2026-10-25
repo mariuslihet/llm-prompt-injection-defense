@@ -58,3 +58,13 @@ email-agent execution, adaptive natural-language campaigns and bounded durable
 jobs are implemented. Production acceptance remains open until valid model
 evaluation, durable network latency, Linux deployment and independent security
 review are evidenced. User-approved model acquisition is local inference only.
+
+
+## Workflow increment — 2026-10-25
+
+Distinct scoped record tools, 30 versioned task instances, integrity/memory outcomes,
+operator approval review and restore rehearsal are implemented and locally tested.
+117 offline tests pass. Live integrity attacks still altered 2/3 IFC answers;
+concurrency-16 end-to-end p95 was 348.90 ms, above the 50 ms gate.
+See [the measured workflow report](reports/workflow-improvements-2026-10-25.md).
+Production acceptance remains open; no publication or Git mutations were performed.

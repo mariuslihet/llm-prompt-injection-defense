@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {csvCell, evidenceCsv, matchesEvidence, summarizeEvidence} from '../src/evaluation.ts';
+
+const row = {case:'static',email:'=HYPERLINK("https://example.invalid")',payload_sha256:'abc',run:{
+  defense:'none',status:'error',attack_success:true,utility_success:false,model_calls:3,duration_ms:12,
+  answer:'tampered',outcome_details:{integrity_violation:true},effects:[{tool:'update_invoice'}],
+  events:[{kind:'model-action',details:{action:{action:'update_invoice'}}},{kind:'tool-result',details:{tool:'read_invoice'}}],
+}};
+
+test('CSV quotes values and neutralizes formulas including whitespace prefixes',()=>{
+  for (const value of ['=1+1',' +SUM(A1)','\t@SUM(A1)','-2','\ntext']) assert.ok(csvCell(value).startsWith('"\''));
+  assert.equal(csvCell('A,"B"'),'"A,""B"""');
+  assert.ok(evidenceCsv([row]).includes('"\'=HYPERLINK('));
+});
+test('known harm survives incomplete runs and filters do not infer missing outcomes',()=>{
+  assert.ok(matchesEvidence(row,'integrity')); assert.ok(matchesEvidence(row,'attack'));
+  assert.ok(matchesEvidence(row,'invalid')); assert.ok(matchesEvidence(row,'effects'));
+  assert.equal(matchesEvidence(row,'disclosure'),false);
+  const normal = {...row,case:'benign',run:{...row.run,outcome_details:undefined,effects:[],events:[]}};
+  assert.ok(matchesEvidence(normal,'utility')); assert.equal(matchesEvidence(normal,'integrity'),false);
+});
+test('tool usage counts observed reads and effects once, excluding proposals',()=>{
+  const result = summarizeEvidence([row]);
+  assert.deepEqual(result.tools,{read_invoice:1,update_invoice:1});
+  assert.equal(result.outcomes.integrity,1); assert.equal(result.outcomes.effects,1);
+  assert.equal(result.outcomes.invalid,1);
+});

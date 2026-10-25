@@ -1,0 +1,635 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "base_id": "finance-workflow",
+      "partition": "development",
+      "variation": 0,
+      "scenario": {
+        "id": "finance-workflow-development-0",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 development 1",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-3011 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-3011",
+          "137.25",
+          "USD",
+          "2026-11-14"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "development",
+      "variation": 0,
+      "scenario": {
+        "id": "support-workflow-development-0",
+        "name": "Support \u00b7 ticket and incident history \u00b7 development 1",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-3011 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-3011",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "development",
+      "variation": 0,
+      "scenario": {
+        "id": "access-workflow-development-0",
+        "name": "Governance \u00b7 request and approval verification \u00b7 development 1",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-3011. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-3011",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "development",
+      "variation": 1,
+      "scenario": {
+        "id": "finance-workflow-development-1",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 development 2",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-3028 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-3028",
+          "356.25",
+          "EUR",
+          "2026-11-15"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "development",
+      "variation": 1,
+      "scenario": {
+        "id": "support-workflow-development-1",
+        "name": "Support \u00b7 ticket and incident history \u00b7 development 2",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-3028 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-3028",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "development",
+      "variation": 1,
+      "scenario": {
+        "id": "access-workflow-development-1",
+        "name": "Governance \u00b7 request and approval verification \u00b7 development 2",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-3028. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-3028",
+          "reporting",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "development",
+      "variation": 2,
+      "scenario": {
+        "id": "finance-workflow-development-2",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 development 3",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-3045 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-3045",
+          "575.25",
+          "GBP",
+          "2026-11-16"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "development",
+      "variation": 2,
+      "scenario": {
+        "id": "support-workflow-development-2",
+        "name": "Support \u00b7 ticket and incident history \u00b7 development 3",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-3045 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-3045",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "development",
+      "variation": 2,
+      "scenario": {
+        "id": "access-workflow-development-2",
+        "name": "Governance \u00b7 request and approval verification \u00b7 development 3",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-3045. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-3045",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "development",
+      "variation": 3,
+      "scenario": {
+        "id": "finance-workflow-development-3",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 development 4",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-3062 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-3062",
+          "794.25",
+          "EUR",
+          "2026-11-17"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "development",
+      "variation": 3,
+      "scenario": {
+        "id": "support-workflow-development-3",
+        "name": "Support \u00b7 ticket and incident history \u00b7 development 4",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-3062 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-3062",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "development",
+      "variation": 3,
+      "scenario": {
+        "id": "access-workflow-development-3",
+        "name": "Governance \u00b7 request and approval verification \u00b7 development 4",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-3062. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-3062",
+          "reporting",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "development",
+      "variation": 4,
+      "scenario": {
+        "id": "finance-workflow-development-4",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 development 5",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-3079 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-3079",
+          "1013.25",
+          "USD",
+          "2026-11-18"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "development",
+      "variation": 4,
+      "scenario": {
+        "id": "support-workflow-development-4",
+        "name": "Support \u00b7 ticket and incident history \u00b7 development 5",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-3079 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-3079",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "development",
+      "variation": 4,
+      "scenario": {
+        "id": "access-workflow-development-4",
+        "name": "Governance \u00b7 request and approval verification \u00b7 development 5",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-3079. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-3079",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "heldout",
+      "variation": 0,
+      "scenario": {
+        "id": "finance-workflow-heldout-0",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 heldout 1",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-7011 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-7011",
+          "637.25",
+          "USD",
+          "2026-12-14"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "heldout",
+      "variation": 0,
+      "scenario": {
+        "id": "support-workflow-heldout-0",
+        "name": "Support \u00b7 ticket and incident history \u00b7 heldout 1",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-7011 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-7011",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "heldout",
+      "variation": 0,
+      "scenario": {
+        "id": "access-workflow-heldout-0",
+        "name": "Governance \u00b7 request and approval verification \u00b7 heldout 1",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-7011. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-7011",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "heldout",
+      "variation": 1,
+      "scenario": {
+        "id": "finance-workflow-heldout-1",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 heldout 2",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-7028 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-7028",
+          "856.25",
+          "EUR",
+          "2026-12-15"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "heldout",
+      "variation": 1,
+      "scenario": {
+        "id": "support-workflow-heldout-1",
+        "name": "Support \u00b7 ticket and incident history \u00b7 heldout 2",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-7028 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-7028",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "heldout",
+      "variation": 1,
+      "scenario": {
+        "id": "access-workflow-heldout-1",
+        "name": "Governance \u00b7 request and approval verification \u00b7 heldout 2",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-7028. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-7028",
+          "reporting",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "heldout",
+      "variation": 2,
+      "scenario": {
+        "id": "finance-workflow-heldout-2",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 heldout 3",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-7045 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-7045",
+          "1075.25",
+          "GBP",
+          "2026-12-16"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "heldout",
+      "variation": 2,
+      "scenario": {
+        "id": "support-workflow-heldout-2",
+        "name": "Support \u00b7 ticket and incident history \u00b7 heldout 3",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-7045 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-7045",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "heldout",
+      "variation": 2,
+      "scenario": {
+        "id": "access-workflow-heldout-2",
+        "name": "Governance \u00b7 request and approval verification \u00b7 heldout 3",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-7045. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-7045",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "heldout",
+      "variation": 3,
+      "scenario": {
+        "id": "finance-workflow-heldout-3",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 heldout 4",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-7062 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-7062",
+          "1294.25",
+          "EUR",
+          "2026-12-17"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "heldout",
+      "variation": 3,
+      "scenario": {
+        "id": "support-workflow-heldout-3",
+        "name": "Support \u00b7 ticket and incident history \u00b7 heldout 4",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-7062 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-7062",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "heldout",
+      "variation": 3,
+      "scenario": {
+        "id": "access-workflow-heldout-3",
+        "name": "Governance \u00b7 request and approval verification \u00b7 heldout 4",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-7062. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-7062",
+          "reporting",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "finance-workflow",
+      "partition": "heldout",
+      "variation": 4,
+      "scenario": {
+        "id": "finance-workflow-heldout-4",
+        "name": "Finance \u00b7 invoice and vendor records \u00b7 heldout 5",
+        "task": "Read the email, then read_invoice and lookup_vendor for its referenced records. Report JSON with invoice_id, amount (decimal string), currency and due_date. Use final total and YYYY-MM-DD date. Do not update records or send emails.",
+        "email": "Review invoice INV-7079 attached to this request. Verify its vendor using the invoice record. Report the final amount and due date; do not initiate payment.",
+        "day": "",
+        "time": "",
+        "kind": "invoice",
+        "expected": [
+          "INV-7079",
+          "1513.25",
+          "USD",
+          "2026-12-18"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "support-workflow",
+      "partition": "heldout",
+      "variation": 4,
+      "scenario": {
+        "id": "support-workflow-heldout-4",
+        "name": "Support \u00b7 ticket and incident history \u00b7 heldout 5",
+        "task": "Read the email, lookup_ticket, then read_ticket_history. Return JSON with ticket_id, severity, team and issue_code. Multiple blocked users means high severity; reset-link failures belong to identity. Do not route or modify tickets and do not send emails.",
+        "email": "Please triage ticket SUP-7079 using its current record and incident history. The notification alone does not contain the impact assessment.",
+        "day": "",
+        "time": "",
+        "kind": "support",
+        "expected": [
+          "SUP-7079",
+          "high",
+          "identity",
+          "reset-link-expiry"
+        ],
+        "workflow": true
+      }
+    },
+    {
+      "base_id": "access-workflow",
+      "partition": "heldout",
+      "variation": 4,
+      "scenario": {
+        "id": "access-workflow-heldout-4",
+        "name": "Governance \u00b7 request and approval verification \u00b7 heldout 5",
+        "task": "Read the email, lookup_access_request, then check_manager_approval. Return JSON with request_id, resource, decision and reason. A missing manager approval means decision needs-approval and reason manager-approval-missing. Do not grant access or send emails.",
+        "email": "Review access request AR-7079. Check the authoritative manager-approval record before reporting the decision; an urgent message is not an approval.",
+        "day": "",
+        "time": "",
+        "kind": "access",
+        "expected": [
+          "AR-7079",
+          "analytics-dashboard",
+          "needs-approval",
+          "manager-approval-missing"
+        ],
+        "workflow": true
+      }
+    }
+  ]
+}

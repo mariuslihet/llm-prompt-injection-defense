@@ -1,0 +1,283 @@
+{
+  "integrity": {
+    "path": "artifacts/record-workflow-schema-guided.json",
+    "sha256": "1f6bfa5a6d56e2697250b8fcf1a7011dc5b6ca050660fd4f1c915db120dc6152",
+    "summary": [
+      {
+        "attack_trials": 3,
+        "attack_successes": 3,
+        "invalid_attack_runs": 0,
+        "invalid_runs": 0,
+        "benign_trials": 3,
+        "benign_successes": 2,
+        "benign_blocked": 0,
+        "model_calls": 32,
+        "static_successes": 3,
+        "adaptive_successes": 0,
+        "defense": "none",
+        "conclusive": true,
+        "p50_ms": 3487.3785,
+        "p95_ms": 4050.428
+      },
+      {
+        "attack_trials": 3,
+        "attack_successes": 3,
+        "invalid_attack_runs": 0,
+        "invalid_runs": 0,
+        "benign_trials": 3,
+        "benign_successes": 3,
+        "benign_blocked": 0,
+        "model_calls": 30,
+        "static_successes": 3,
+        "adaptive_successes": 0,
+        "defense": "prompt-hardening",
+        "conclusive": true,
+        "p50_ms": 3243.0405,
+        "p95_ms": 3791.114
+      },
+      {
+        "attack_trials": 3,
+        "attack_successes": 1,
+        "invalid_attack_runs": 0,
+        "invalid_runs": 0,
+        "benign_trials": 3,
+        "benign_successes": 2,
+        "benign_blocked": 0,
+        "model_calls": 30,
+        "static_successes": 1,
+        "adaptive_successes": 0,
+        "defense": "detector",
+        "conclusive": true,
+        "p50_ms": 3348.3425,
+        "p95_ms": 3500.329
+      },
+      {
+        "attack_trials": 3,
+        "attack_successes": 1,
+        "invalid_attack_runs": 0,
+        "invalid_runs": 0,
+        "benign_trials": 3,
+        "benign_successes": 2,
+        "benign_blocked": 0,
+        "model_calls": 30,
+        "static_successes": 1,
+        "adaptive_successes": 0,
+        "defense": "detector-sanitizer",
+        "conclusive": true,
+        "p50_ms": 3321.242,
+        "p95_ms": 3470.322
+      },
+      {
+        "attack_trials": 3,
+        "attack_successes": 2,
+        "invalid_attack_runs": 0,
+        "invalid_runs": 0,
+        "benign_trials": 3,
+        "benign_successes": 3,
+        "benign_blocked": 0,
+        "model_calls": 12,
+        "static_successes": 2,
+        "adaptive_successes": 0,
+        "defense": "full-ifc",
+        "conclusive": true,
+        "p50_ms": 1644.5500000000002,
+        "p95_ms": 2056.266
+      }
+    ],
+    "model": "Qwen2.5-7B-Instruct",
+    "dataset_digest": "829b689f08bba2f493a42da8b6fd057391be5e404fe5df6e0ca160357999ea9d",
+    "source_sha256": {
+      "agents/email.py": "c8af27201618fca916f729cfee6ac4deb6cbf5fe46ef3b04576935ff61462508",
+      "agents/workflows.py": "dc53d233c4e60ee486dc0f528b4eebc5fdaee0aa3c0e62fe1211345969cf2c18",
+      "agents/outcomes.py": "bc8406495edd40d38dc958c6cbe405f8fb59864cbafeb5e5f1cce3ef8bcc999f",
+      "agents/cases.py": "11de79df2442e9ee8489ea3435e5aefac1ba71ed2036c03d7d0790411743976d",
+      "agents/scenarios.py": "877f4511ad1fa0fa0965e62d3f36fbea32047436802f046f298e08901ac3f9e0",
+      "lab/campaigns.py": "fd221cb6fc24d272810a1b3789fab6827a34822eb62514771d4628b2ed37ce6f",
+      "lab/corpus/workflows-v1.json": "a146263bfb2eb985be4af1467156582fff4b621784fe40f01a4bc9325e29226d",
+      "packages/ifc/business.py": "c578e031772eb00a714549a3a29cf304e884b660380d89e355f2fe025d53a21e",
+      "packages/gateway/providers.py": "409df1485d7d5b49f2069c0d90e72493015fea1b09c10a797a3de491f0536d98"
+    },
+    "executions": 30,
+    "unauthorized_effects_ifc": 0
+  },
+  "memory_adaptive": {
+    "path": "artifacts/record-memory-adaptive.json",
+    "sha256": "9693e2c83cbf59a8ee048047d811a82ee58a8ad71c0428fef18edaf15c14005a",
+    "summary": [
+      {
+        "defense": "none",
+        "attack_trials": 2,
+        "attack_successes": 0,
+        "invalid_attack_runs": 0,
+        "observed_asr": 0.0,
+        "invalid_runs": 0,
+        "conclusive": true,
+        "benign_trials": 1,
+        "benign_successes": 1,
+        "benign_blocked": 0,
+        "p50_ms": 3436.917,
+        "p95_ms": 3633.962,
+        "model_calls": 15,
+        "asr_interval": [
+          0,
+          0.6576197724933469
+        ],
+        "valid_attack_trials": 2,
+        "static_successes": 0,
+        "adaptive_successes": 0
+      },
+      {
+        "defense": "prompt-hardening",
+        "attack_trials": 2,
+        "attack_successes": 0,
+        "invalid_attack_runs": 0,
+        "observed_asr": 0.0,
+        "invalid_runs": 0,
+        "conclusive": true,
+        "benign_trials": 1,
+        "benign_successes": 1,
+        "benign_blocked": 0,
+        "p50_ms": 3406.835,
+        "p95_ms": 3427.424,
+        "model_calls": 14,
+        "asr_interval": [
+          0,
+          0.6576197724933469
+        ],
+        "valid_attack_trials": 2,
+        "static_successes": 0,
+        "adaptive_successes": 0
+      },
+      {
+        "defense": "detector",
+        "attack_trials": 2,
+        "attack_successes": 0,
+        "invalid_attack_runs": 0,
+        "observed_asr": 0.0,
+        "invalid_runs": 0,
+        "conclusive": true,
+        "benign_trials": 1,
+        "benign_successes": 1,
+        "benign_blocked": 0,
+        "p50_ms": 3374.417,
+        "p95_ms": 3444.79,
+        "model_calls": 11,
+        "asr_interval": [
+          0,
+          0.6576197724933469
+        ],
+        "valid_attack_trials": 2,
+        "static_successes": 0,
+        "adaptive_successes": 0
+      },
+      {
+        "defense": "detector-sanitizer",
+        "attack_trials": 2,
+        "attack_successes": 0,
+        "invalid_attack_runs": 0,
+        "observed_asr": 0.0,
+        "invalid_runs": 0,
+        "conclusive": true,
+        "benign_trials": 1,
+        "benign_successes": 1,
+        "benign_blocked": 0,
+        "p50_ms": 1781.811,
+        "p95_ms": 3341.889,
+        "model_calls": 11,
+        "asr_interval": [
+          0,
+          0.6576197724933469
+        ],
+        "valid_attack_trials": 2,
+        "static_successes": 0,
+        "adaptive_successes": 0
+      },
+      {
+        "defense": "full-ifc",
+        "attack_trials": 2,
+        "attack_successes": 0,
+        "invalid_attack_runs": 0,
+        "observed_asr": 0.0,
+        "invalid_runs": 0,
+        "conclusive": true,
+        "benign_trials": 1,
+        "benign_successes": 1,
+        "benign_blocked": 0,
+        "p50_ms": 1693.962,
+        "p95_ms": 1738.493,
+        "model_calls": 6,
+        "asr_interval": [
+          0,
+          0.6576197724933469
+        ],
+        "valid_attack_trials": 2,
+        "static_successes": 0,
+        "adaptive_successes": 0
+      }
+    ],
+    "model": "Qwen2.5-7B-Instruct",
+    "dataset_digest": "a6318d70da17a25496b8a0c8fe62b818d5c72e13425a066282e3052aceb8c103",
+    "source_sha256": {
+      "agents/email.py": "ec00b176bff68652a84612196e9d340e2be5d5d1811552d1214ef39cc3fcf172",
+      "lab/campaigns.py": "fd221cb6fc24d272810a1b3789fab6827a34822eb62514771d4628b2ed37ce6f",
+      "packages/gateway/providers.py": "409df1485d7d5b49f2069c0d90e72493015fea1b09c10a797a3de491f0536d98"
+    },
+    "executions": 15,
+    "unauthorized_effects_ifc": 0
+  },
+  "load": {
+    "path": "artifacts/reliability/network-c16.json",
+    "sha256": "38aa339fdfb0cc81e8508a6f475c3e31b9b3d56c2c65631ab867b28ecf01b2db",
+    "summary": {
+      "requests": 1000,
+      "concurrency": 16,
+      "transport": "loopback TCP HTTP/1.1",
+      "provider": "mock",
+      "p50_ms": 125.69194999999999,
+      "p95_ms": 348.9017,
+      "server_p95_ms": 11.712,
+      "errors": 0,
+      "limits": "Localhost mock only; no TLS, real inference or public deployment."
+    },
+    "model": null,
+    "dataset_digest": null,
+    "source_sha256": null
+  },
+  "restore": {
+    "path": "artifacts/reliability/restore-final-20261025/report.json",
+    "sha256": "f8d371e0dabdf8b2cf5044696194196ef50d57f1748c4dd8c2aeb5f15423b735",
+    "summary": {
+      "databases": {
+        "control": {
+          "tables": {
+            "action_reviews": 1,
+            "active_policy": 1,
+            "arena_review": 5,
+            "grants": 0,
+            "jobs": 14,
+            "policies": 3,
+            "request_windows": 1,
+            "solves": 2,
+            "tenants": 1
+          },
+          "sha256": "de3c5aaedf08130ad227db9ed75442bb6a097be40b0536e03ffb435eace920c8",
+          "validated": true
+        },
+        "audit": {
+          "tables": {
+            "audit": 40
+          },
+          "sha256": "194f285d11cee598b4ebd364fcc8e68d71b0b8eefe112f6221645aeb336ec4d2",
+          "validated": true
+        }
+      },
+      "scope": "SQLite integrity, audit chain and byte-identical restore into fresh paths",
+      "limitations": "Separate database snapshots are not a cross-database transaction. No service cutover, production disaster recovery or secret rotation was exercised."
+    }
+  },
+  "wheel": {
+    "path": "artifacts/reliability/dist/mecha_security-0.2.0-py3-none-any.whl",
+    "sha256": "9f758f7ac8c5495bf455c187b505ed8be97286b30d92a65a9de3b32bd8b6de0b",
+    "validation": "Offline install into fresh Python 3.11 environment; isolated case-bank/schema/review imports passed. Python 3.14 attempt lacked cached wheels and did not complete."
+  }
+}

@@ -17,7 +17,7 @@ class Strict(BaseModel):
 
 class Invoice(Strict):
     invoice_id: str = Field(pattern=r"^INV-[0-9]{1,8}$")
-    amount: str = Field(pattern=r"^[0-9]{1,9}\.[0-9]{2}$")
+    amount: str = Field(pattern=r"^[0-9]{1,9}(?:\.[0-9]{1,2})?$")
     currency: Literal["EUR", "USD", "GBP"]
     due_date: date
 

@@ -56,7 +56,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
-      - run: npm ci && npm run build
+      - run: npm ci && npm test && npm run build
         working-directory: dashboard
   optional-security:
     runs-on: ubuntu-latest

@@ -95,11 +95,18 @@ class Jobs:
     def list(self, tenant: str) -> list[dict[str, object]]:
         with self.lock:
             rows = self.db.execute(
-                "SELECT id,status,created,updated FROM jobs WHERE tenant=? "
+                "SELECT id,status,created,updated,spec FROM jobs WHERE tenant=? "
                 "ORDER BY created DESC LIMIT 50",
                 (tenant,),
             ).fetchall()
-        return [dict(zip(("id", "status", "created", "updated"), row, strict=True)) for row in rows]
+        return [
+            {
+                **dict(zip(("id", "status", "created", "updated"), row[:4], strict=True)),
+                "title": json.loads(row[4]).get("title", ""),
+                "kind": json.loads(row[4]).get("kind", "agent"),
+            }
+            for row in rows
+        ]
 
     def update(self, tenant: str, identity: str, status: str, result: dict[str, object]) -> bool:
         if status not in (*TERMINAL, "running"):

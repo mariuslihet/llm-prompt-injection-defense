@@ -135,3 +135,13 @@ build. Quantization was removed; explicit float32 completed the actual study.
 The current operator decisions defer external deployment/publication checks.
 They do not waive these gates or justify calling the MVP production-certified.
 See ../MVP.md and ../ACCEPTANCE.md for the supported scope and remaining work.
+
+
+## Workflow increment — 2026-10-25
+
+Distinct scoped record tools, 30 versioned task instances, integrity/memory outcomes,
+operator approval review and restore rehearsal are implemented and locally tested.
+117 offline tests pass. Live integrity attacks still altered 2/3 IFC answers;
+concurrency-16 end-to-end p95 was 348.90 ms, above the 50 ms gate.
+See [the measured workflow report](workflow-improvements-2026-10-25.md).
+Production acceptance remains open; no publication or Git mutations were performed.

@@ -14,17 +14,17 @@ from typing import Annotated, Literal
 
 import yaml
 from anyio import to_thread
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from packages.core import Segment
+from packages.core import Confidentiality, Label, Segment, Trust, Value
 from packages.detectors import LocalClassifier
 from packages.detectors.cascade import Cascade, CascadeConfig, ProviderJudge
 from packages.gateway.providers import Provider, configured_provider
 from packages.ifc import Interpreter, Program, plan, trusted_value, untrusted_value
-from packages.policy import binding, compile_policy, verify
+from packages.policy import binding, compile_policy, evaluate, verify
 from packages.policy.store import PolicyStore
 from packages.sanitizers import sanitize
 from packages.storage import Identity, State, StateApprovals
@@ -149,6 +149,23 @@ class ToolRequest(ApprovalRequest):
     untrusted_context: str = Field(default="", max_length=32768)
 
 
+class ReviewDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    approve: bool = Field(strict=True)
+    note: str = Field(default="", max_length=1000)
+
+
+class ReviewSubmission(ApprovalRequest):
+    title: str = Field(default="Public summary review", min_length=1, max_length=100)
+    justification: str = Field(default="", max_length=1000)
+    priority: Literal["normal", "high", "urgent"] = "normal"
+
+
+class ReviewNote(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+
+
 class PolicyEdit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(max_length=65536)
@@ -257,6 +274,9 @@ def create_app(
             Identity(role=tenant_config.role, platform_admin=tenant_config.platform_admin),
         )
     approvals = StateApprovals(state)
+    from packages.review import ReviewQueue
+
+    reviews = ReviewQueue(state)
     detector = cascade or Cascade(
         CascadeConfig(
             mode=os.getenv("MECHA_DETECTOR_MODE", "block"),
@@ -330,8 +350,14 @@ def create_app(
             raise HTTPException(503, "storage unavailable") from exc
 
     @api.get("/lab/config")
-    async def lab_config(auth: Auth):
+    async def lab_config(
+        auth: Auth,
+        partition: Literal["development", "heldout"] = "development",
+        variation: int = Query(0, ge=0, le=4),
+        goal: Literal["exfiltration", "integrity", "memory"] = "exfiltration",
+    ):
         require(auth, {"viewer", "operator", "admin"})
+        from agents.cases import resolve_case
         from agents.email import DEFENSES
         from agents.scenarios import SCENARIOS, STRATEGIES, attack_input
 
@@ -340,21 +366,42 @@ def create_app(
             "provider": type(lab_provider).__name__ if lab_provider else "disabled",
             "model": lab_model,
             "defenses": DEFENSES,
-            "task": SCENARIOS["invoice"].task,
-            "attack_email": attack_input(SCENARIOS["invoice"], "authority"),
-            "benign_email": SCENARIOS["invoice"].email,
+            "task": resolve_case("finance-workflow", partition, variation).task,
+            "attack_email": attack_input(
+                resolve_case("finance-workflow", partition, variation), "authority"
+            ),
+            "benign_email": resolve_case("finance-workflow", partition, variation).email,
             "scenarios": [
                 {
-                    "id": s.id,
+                    "id": s.id.split("-" + partition + "-")[0],
+                    "case_id": s.id,
                     "name": s.name,
                     "task": s.task,
                     "email": s.email,
-                    "attacks": {key: attack_input(s, key) for key in STRATEGIES},
+                    "attacks": {
+                        key: attack_input(s, key, goal if s.workflow else "exfiltration")
+                        for key in STRATEGIES
+                    },
+                    "workflow": s.workflow,
                 }
-                for s in sorted(SCENARIOS.values(), key=lambda s: s.kind == "meeting")
+                for s in [
+                    resolve_case(key, partition, variation)
+                    for key in sorted(
+                        SCENARIOS,
+                        key=lambda key: (
+                            not SCENARIOS[key].workflow,
+                            SCENARIOS[key].kind == "meeting",
+                        ),
+                    )
+                ]
             ],
             "strategies": STRATEGIES,
-            "tools": "Incoming email, confidential sample memo, simulated email ledger",
+            "tools": "Scoped invoice/vendor, ticket/history, request/approval reads; "
+            "isolated simulated mutations",
+            "partition": partition,
+            "variation": variation,
+            "case_count": 30,
+            "heldout_limit": "Authored held-out cases, not independent external validation",
         }
 
     @api.post("/lab/jobs", status_code=202)
@@ -607,6 +654,148 @@ def create_app(
         token = approvals.issue(binding(tenant, store.get(tenant), body.tool, tool_values(body)))
         ledger.append(tenant, {"action": "approve", "rule": body.tool, "reason": "human API"})
         return {"approval": token, "expires_in": 300}
+
+    def reviewed_values(proposal: dict):
+        from agents.mock import CANARY
+
+        args = proposal["arguments"]
+        if proposal["tool"] != "send_email" or set(args) != {"recipient", "body"}:
+            raise ValueError("review supports exactly recipient/body for simulated email")
+        if not re.fullmatch(r"[a-zA-Z0-9._+-]{1,64}@example\.invalid", args["recipient"]):
+            raise ValueError("review destination must use example.invalid")
+        if len(args["body"]) > 4096:
+            raise ValueError("review content too large")
+        return {
+            "recipient": trusted_value(args["recipient"], sinks=frozenset({"send_email"})),
+            "body": Value(
+                data=args["body"],
+                label=Label(
+                    sources=frozenset({"operator-review-data"}),
+                    trust=Trust.UNTRUSTED,
+                    confidentiality=Confidentiality.PRIVATE
+                    if CANARY in args["body"]
+                    else Confidentiality.PUBLIC,
+                    allowed_sinks=frozenset({"send_email"}),
+                ),
+            ),
+        }
+
+    @api.get("/reviews")
+    async def list_reviews(auth: Auth):
+        return {
+            "reviews": reviews.list(auth[0]),
+            "role": auth[1].role,
+            "policy_digest": store.get(auth[0]).digest,
+        }
+
+    @api.post("/reviews/{identity}/notes")
+    async def annotate_review(identity: str, body: ReviewNote, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        try:
+            reviews.get(tenant, identity)
+            await append_decision(
+                tenant, {"action": "flag", "rule": "review-comment", "request_id": identity}
+            )
+            return reviews.annotate(tenant, identity, body.note, auth[1].role)
+        except KeyError as exc:
+            raise HTTPException(404, "review not found") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @api.post("/reviews/{identity}/withdraw")
+    async def withdraw_review(identity: str, body: ReviewNote, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        try:
+            reviews.get(tenant, identity)
+            await append_decision(
+                tenant, {"action": "flag", "rule": "review-withdrawn", "request_id": identity}
+            )
+            return reviews.withdraw(tenant, identity, body.note, auth[1].role)
+        except KeyError as exc:
+            raise HTTPException(404, "review not found") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @api.post("/reviews", status_code=201)
+    async def submit_review(body: ReviewSubmission, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        try:
+            values = reviewed_values(body.model_dump())
+            policy = store.get(tenant)
+            decision = evaluate(policy, body.tool, values, read_untrusted=True)
+            if not decision.needs_approval:
+                raise ValueError("proposal cannot be reviewed: " + decision.reason)
+            await append_decision(tenant, {"action": "flag", "rule": "review-requested"})
+            return reviews.create(
+                tenant,
+                policy.digest,
+                {
+                    **body.model_dump(),
+                    "labels": {k: v.label.model_dump(mode="json") for k, v in values.items()},
+                    "reason": decision.reason,
+                    "origin": "authenticated operator intent",
+                },
+                actor=auth[1].role,
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @api.post("/reviews/{identity}/decision")
+    async def decide_review(identity: str, body: ReviewDecision, auth: Auth):
+        tenant = require(auth, {"admin"})
+        try:
+            reviews.get(tenant, identity)
+            await append_decision(
+                tenant,
+                {"action": "flag", "rule": "review-decision-requested", "request_id": identity},
+            )
+            policy = store.get(tenant)
+            proposal = reviews.claim(
+                tenant, identity, policy.digest, body.approve, body.note, auth[1].role
+            )
+        except KeyError as exc:
+            raise HTTPException(404, "review not found") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        if not body.approve:
+            return reviews.get(tenant, identity)
+        try:
+            tool = proposal["proposal"]["tool"]
+            values = reviewed_values(proposal["proposal"])
+            token = approvals.issue(binding(tenant, policy, tool, values))
+            program = Program.model_validate(
+                {
+                    "instructions": [
+                        {
+                            "op": "call",
+                            "tool": tool,
+                            "arguments": {k: k for k in values},
+                            "approval": token,
+                        }
+                    ]
+                }
+            )
+            runtime = Interpreter(policy, tenant, approvals)
+            runtime.run(program, {**values, "context": untrusted_value("reviewed context")})
+            decision = runtime.decisions[-1]
+            await append_decision(
+                tenant,
+                {
+                    "action": "allow" if decision.allowed else "block",
+                    "rule": "review-executed",
+                    "request_id": identity,
+                    "trace": runtime.snapshot().model_dump_json(),
+                },
+            )
+            return reviews.finish(
+                tenant,
+                identity,
+                {"decision": decision.model_dump(), "effects": runtime.effects, "simulated": True},
+                failed=not decision.allowed,
+            )
+        except Exception as exc:
+            reviews.finish(tenant, identity, {"error": "review execution failed"}, failed=True)
+            raise HTTPException(503, "review execution failed; do not retry this action") from exc
 
     @api.post("/tools/call")
     async def tool_call(body: ToolRequest, auth: Auth):

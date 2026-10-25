@@ -266,7 +266,7 @@ third-party system is an attack target.
 ## Local model quickstart
 
 The verified setup uses Windows, Python 3.11+, Git,
-[uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 22+, and an
+[uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 24, and an
 NVIDIA GPU with 8 GB VRAM. It was checked on an RTX 2070. The supplied launcher uses
 CUDA 12.4 Windows binaries; other platforms need their own runtime configuration.
 
@@ -334,9 +334,66 @@ Choose a completed baseline to compare matching datasets. Different inputs or
 budgets are rejected; model/policy changes are identified separately. Comparisons
 are descriptive and do not establish statistical significance.
 
-Jobs share a **128-model-call budget**, a **600-second deadline**, and one executing
-slot. Exhausted budgets, malformed outputs, and provider failures are explicit.
+Single-scenario campaigns share a **128-model-call budget**. The suite reserves
+`30 × max(2, turn limit)` calls, up to **240 calls**, so early scenarios cannot consume
+the calls needed by later configurations. Jobs have a **600-second deadline** and one executing slot. Exhausted budgets, malformed outputs, and provider failures are explicit.
 Invalid evidence is inconclusive.
+
+## Workflow evidence and human review
+
+Choose a **development or held-out partition**, one of **five variations**, and an
+objective: confidential disclosure, record/answer tampering, or memory poisoning.
+The versioned bank contains **30 task instances** with disjoint partition IDs.
+The held-out set is locally authored and has now been inspected during development;
+it is no longer an untouched validation set. New independent cases are needed for release.
+
+Inject through the email or a returned record. Inspect **Fact checks and security
+outcomes** and **Observed state changes** beside each actual timeline. Utility
+requires schema-valid, correct fields, required source reads, and no unauthorized
+effect. Recovery prompts reveal field names and missing tools, never expected answers.
+A wrong answer is only an integrity attack success when it matches the specified
+attacker target; quoted instructions alone are insufficient evidence.
+
+**Approval Review** accepts explicit operator proposals for public summaries to
+reserved sample recipients. Admins approve or deny requests bound to tenant,
+policy, arguments and server-assigned labels. Requests expire after five minutes;
+execution is single use and interrupted execution is not automatically retried.
+These approvals record simulated effects and do not override confidentiality rules
+or approve arbitrary model-originated recipients.
+
+Fresh local evidence found integrity attacks that changed extracted answers even
+in IFC mode. IFC restricts tool authority; it does not establish factual correctness.
+The concurrency-16 loopback test also missed its 50 ms p95 target (348.90 ms,
+1,000 requests, zero HTTP errors). See the [workflow improvement report](docs/reports/workflow-improvements-2026-10-25.md)
+for results and the remaining gates.
+
+## Approval and evaluation workspaces
+
+**Approval Review** provides a searchable queue with status filters, priority
+sorting and expiry countdowns. Create a titled request with business justification,
+inspect its bound policy and labels, add comments, then approve, deny or withdraw
+it with a note. The history records the authenticated tenant role and timestamps;
+it does not identify individual people. Export one review as JSON, or copy its
+content into a new request for revision. Copying does not submit or approve it.
+Existing proposals cannot be edited, and expired or withdrawn requests cannot execute.
+
+**Agent Evaluation** supports named runs and a selectable set of comparison
+defenses. A suite with two defenses performs 12 executions across the six cases;
+the default five-defense suite performs 30. Budgets and dataset fingerprints follow
+the selection. Outcome cards separate answer tampering, disclosure, unauthorized
+tool effects, normal-task success and invalid execution. Observed tool usage counts
+actual tool results and effects, excluding rejected proposals.
+
+Filter results by integrity, disclosure, effects or normal-task failure, then
+export that selection as CSV. Exports quote cells and neutralize spreadsheet
+formula prefixes. Search saved runs by name/ID or filter their status. **Load saved
+configuration** restores the recorded setup into the editor; running it creates
+new evidence using the current model and policy. Earlier results remain intact.
+Human-readable run names do not alter dataset compatibility.
+
+Run `npm --prefix dashboard test` for the frontend outcome/export tests (verified
+with Node 24). The CI frontend job includes these checks; a hosted run has not been
+asserted from local results.
 
 ## Reading results correctly
 
@@ -414,7 +471,7 @@ uv run mecha load-test
 npm --prefix dashboard run build
 ```
 
-The latest local check passed **106 tests**, with **99.20% coverage** across the
+The latest local check passed **122 tests**, with **99.20% coverage** across the
 configured core, policy, IFC, and sanitizer modules. Tests block external network
 connections and use deterministic providers. Windows asyncio's internal socket pair
 remains permitted. Dependency installation and asset acquisition require network access.
@@ -456,9 +513,10 @@ Provider-specific fields, native tool execution, and streaming behavior have
 explicit limitations; it is not complete protocol parity. Application integrations
 must preserve source labels and route protected effects through the interpreter.
 
-The current evaluation agent can read its sample input, read a sample confidential
-memo, and record a simulated email. Invoice reconciliation, support triage, and
-access review are different tasks inside that agent boundary. They are not live
+The evaluation agents read scenario-scoped invoice/vendor, ticket/history, and
+access-request/manager-approval records. Unsafe configurations expose typed record
+mutations and per-run memory writes so the evaluator can observe unauthorized
+changes. Required source reads and output schemas are checked before completion. They are not live
 connections to accounting, ticketing, or identity systems.
 
 Consult [API and SDK integration notes](docs/INTEGRATIONS.md) before connecting an
@@ -467,7 +525,7 @@ service identity, and deployment requirements.
 
 ## Deployment scope and documentation
 
-The supported MVP runs one worker on one host with SQLite. Representative held-out
+The supported MVP runs one worker on one host with SQLite. Representative external
 evaluation, high-concurrency latency acceptance, Linux isolation/deployment checks,
 hosted CI, and independent security review remain open. Docker and Helm assets
 have not been runtime-verified on this Windows host. Publication is deferred and
