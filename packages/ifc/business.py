@@ -43,6 +43,14 @@ SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
+class ExtractionError(ValueError):
+    """A response was received but could not satisfy the extraction contract."""
+
+    def __init__(self, response: str) -> None:
+        super().__init__("model extraction did not satisfy its output schema")
+        self.response = response[:4096]
+
+
 async def extract_business(
     provider: Provider, model: str, value: Value, kind: str, trusted_task: str
 ) -> Value:
@@ -59,5 +67,8 @@ async def extract_business(
         + value.data
     )
     raw = await provider.complete([{"role": "user", "content": prompt}], model)
-    validated = schema.model_validate_json(json_text(raw))
+    try:
+        validated = schema.model_validate_json(json_text(raw))
+    except ValueError as exc:
+        raise ExtractionError(raw) from exc
     return value.transform(validated.model_dump_json())

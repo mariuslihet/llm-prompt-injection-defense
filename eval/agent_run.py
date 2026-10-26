@@ -22,6 +22,8 @@ async def run(args) -> dict[str, object]:
         else configured_provider(args.provider)
     )
     spec = RunSpec(
+        grounding=args.grounding,
+        recover_model_errors=not args.no_model_recovery,
         title=args.title,
         selected_defenses=tuple(args.defenses),
         kind="suite" if args.suite else "campaign" if args.campaign else "agent",
@@ -96,6 +98,8 @@ if __name__ == "__main__":
     parser.add_argument("--defense", choices=DEFENSES, default="full-ifc")
     parser.add_argument("--defenses", nargs="+", choices=DEFENSES, default=list(DEFENSES))
     parser.add_argument("--title", default="")
+    parser.add_argument("--grounding", choices=("off", "shadow", "enforce"), default="enforce")
+    parser.add_argument("--no-model-recovery", action="store_true")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--campaign", action="store_true")
     mode.add_argument("--suite", action="store_true")

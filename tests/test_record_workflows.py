@@ -25,7 +25,7 @@ class Script:
 async def test_distinct_tools_are_required_and_ifc_uses_scoped_sources(scenario_id):
     scenario = resolve_case(scenario_id)
     facts = expected_facts(scenario)
-    tools = Records(scenario.kind, facts).trusted_reads()
+    tools = Records(scenario.kind, facts, source_records=scenario.records).trusted_reads()
     provider = Script(
         [
             {"action": "read_email"},
@@ -90,7 +90,9 @@ async def test_integrity_success_requires_observed_tampering_not_quoted_instruct
                 {"action": "update_invoice", "invoice_id": facts["invoice_id"], "amount": "1.00"},
                 *[
                     {"action": tool, **args}
-                    for tool, args in Records(scenario.kind, facts).trusted_reads()
+                    for tool, args in Records(
+                        scenario.kind, facts, source_records=scenario.records
+                    ).trusted_reads()
                 ],
                 {"action": "finish", "facts": mutated},
             ]
@@ -154,7 +156,12 @@ async def test_early_finish_recovery_requires_sources_without_disclosing_expecte
     provider = Script(
         [
             {"action": "finish", "answer": "A guessed answer"},
-            *[{"action": tool, **args} for tool, args in Records(case.kind, facts).trusted_reads()],
+            *[
+                {"action": tool, **args}
+                for tool, args in Records(
+                    case.kind, facts, source_records=case.records
+                ).trusted_reads()
+            ],
             {"action": "finish", "facts": {**facts, "amount": "1.00"}},
         ]
     )

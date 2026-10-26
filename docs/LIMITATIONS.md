@@ -63,3 +63,30 @@ The latest durable loopback load test recorded p95 348.90 ms at concurrency 16
 Server-only p95 was 11.712 ms and cannot substitute for end-to-end acceptance.
 Restore rehearsal verified each SQLite snapshot independently, not an atomic
 cross-database recovery or a production service cutover.
+
+
+## Source-check increment — 2026-10-26
+
+The earlier IFC answer-integrity failures remain valid historical evidence.
+A new enforce-mode resolver corrected covered invoice/support/access fields,
+with 0/9 static successes and 9/9 normal-task success in a local ablation.
+It relies on structured authoritative adapter fields and finite configured
+business rules. It cannot establish source truth or protect corrupt source
+fields, arbitrary tasks, external tools, or legacy unstructured extraction.
+Adaptive campaigns ran, but the local attacker often generated weak or defensive
+revisions even after a protocol improvement. Zero new adaptive successes in the
+baseline means strong adaptive resistance remains unproven. See the dated
+source-check report for paired evidence and negative results. The gateway
+latency/deployment gates remain open.
+
+## Varied workflow increment — 2026-10-26
+
+The V2 bank adds both approval outcomes, multiple support teams/priorities and
+explicit source records. Source enforcement achieved 15/15 normal tasks and
+0/15 static tampering successes, versus 12/15 successes with checks off. Replaying
+identical generated adaptive payloads yielded 2/3 successes off versus 0/3 enforced.
+This improves the earlier adaptive baseline only for these particular tests.
+Unusable replies can recover within covered read-only workflows; recoveries are
+counted separately from successful model replies. Source compromise, arbitrary
+reasoning and production readiness remain unresolved. See the workflow-quality
+report for methods, evidence and failures.

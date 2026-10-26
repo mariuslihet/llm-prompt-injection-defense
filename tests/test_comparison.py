@@ -92,7 +92,7 @@ async def test_suite_cannot_reset_call_budget_between_scenarios():
 
     provider = InvalidProvider()
     result = await execute(
-        RunSpec(kind="suite", adaptive_rounds=0, max_turns=8),
+        RunSpec(kind="suite", adaptive_rounds=0, max_turns=8, grounding="off"),
         provider,
         "script",
         POLICY,

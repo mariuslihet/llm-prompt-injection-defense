@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-26",
+  "files": {
+    "artifacts/quality-v2-live.json": {
+      "sha256": "7dd98fa011c7c03641d74c15c2d2f82d19dc072a9df4a896d71ebfab35073642",
+      "summary": [
+        {
+          "attack_successes": 12,
+          "attack_trials": 15,
+          "adaptive_successes": 0,
+          "adaptive_trials": 0,
+          "normal_successes": 15,
+          "normal_trials": 15,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 0,
+          "normal_corrections": 0,
+          "model_calls": 60,
+          "p50_ms": 1234.045,
+          "p95_ms": 1519.555,
+          "phase": "static",
+          "mode": "off",
+          "conclusive": true
+        },
+        {
+          "attack_successes": 12,
+          "attack_trials": 15,
+          "adaptive_successes": 0,
+          "adaptive_trials": 0,
+          "normal_successes": 15,
+          "normal_trials": 15,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 0,
+          "normal_corrections": 0,
+          "model_calls": 60,
+          "p50_ms": 1189.2205,
+          "p95_ms": 1443.268,
+          "phase": "static",
+          "mode": "shadow",
+          "conclusive": true
+        },
+        {
+          "attack_successes": 0,
+          "attack_trials": 15,
+          "adaptive_successes": 0,
+          "adaptive_trials": 0,
+          "normal_successes": 15,
+          "normal_trials": 15,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 12,
+          "normal_corrections": 0,
+          "model_calls": 60,
+          "p50_ms": 1184.5720000000001,
+          "p95_ms": 1437.89,
+          "phase": "static",
+          "mode": "enforce",
+          "conclusive": true
+        },
+        {
+          "attack_successes": 5,
+          "attack_trials": 6,
+          "adaptive_successes": 2,
+          "adaptive_trials": 3,
+          "normal_successes": 3,
+          "normal_trials": 3,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 0,
+          "normal_corrections": 0,
+          "model_calls": 18,
+          "p50_ms": 1187.255,
+          "p95_ms": 1438.377,
+          "phase": "adaptive",
+          "mode": "off",
+          "conclusive": true
+        },
+        {
+          "attack_successes": 5,
+          "attack_trials": 6,
+          "adaptive_successes": 2,
+          "adaptive_trials": 3,
+          "normal_successes": 3,
+          "normal_trials": 3,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 0,
+          "normal_corrections": 0,
+          "model_calls": 18,
+          "p50_ms": 1179.05,
+          "p95_ms": 1433.443,
+          "phase": "adaptive",
+          "mode": "shadow",
+          "conclusive": true
+        },
+        {
+          "attack_successes": 0,
+          "attack_trials": 6,
+          "adaptive_successes": 0,
+          "adaptive_trials": 3,
+          "normal_successes": 3,
+          "normal_trials": 3,
+          "invalid_runs": 0,
+          "withheld_runs": 0,
+          "corrected_answers": 6,
+          "normal_corrections": 0,
+          "model_calls": 18,
+          "p50_ms": 1180.46,
+          "p95_ms": 1432.94,
+          "phase": "adaptive",
+          "mode": "enforce",
+          "conclusive": true
+        }
+      ]
+    },
+    "artifacts/adaptive-replay.json": {
+      "sha256": "2526e17ef93715edc3cba389eb01fafcb570e950f692b85cbf670163dcaeb611",
+      "summary": [
+        {
+          "mode": "off",
+          "attacks": 3,
+          "successes": 2,
+          "invalid": 0
+        },
+        {
+          "mode": "enforce",
+          "attacks": 3,
+          "successes": 0,
+          "invalid": 0
+        }
+      ]
+    },
+    "artifacts/workflow-reliability.json": {
+      "sha256": "6c86322b4443e03c6c2f2fdeef0227ccdc62284711174447ce2fbae856186891",
+      "summary": [
+        {
+          "recovery": false,
+          "tasks": 30,
+          "successful_tasks": 0,
+          "errors": 30,
+          "recovered_runs": 0,
+          "recorded_effects": 0
+        },
+        {
+          "recovery": true,
+          "tasks": 30,
+          "successful_tasks": 30,
+          "errors": 0,
+          "recovered_runs": 30,
+          "recorded_effects": 0
+        }
+      ]
+    }
+  },
+  "local_checks": {
+    "python_tests": 144,
+    "security_core_coverage_percent": 99.18,
+    "frontend_tests": 4,
+    "ruff": "passed",
+    "strict_mypy": "passed",
+    "frontend_build": "passed"
+  },
+  "browser_run": {
+    "id_prefix": "748fbfa2",
+    "name": "Varied decisions \u2014 verified",
+    "normal_correct": 3,
+    "normal_total": 3,
+    "attack_successes": 0,
+    "attacks": 3,
+    "invalid": 0,
+    "model_calls": 12,
+    "source_corrected_attacks": 3
+  },
+  "case_bank_sha256": "e4d7872a4f584a2fd971f57406d869ea35a8ef1f662ecb1cff3f47c2fceb6257"
+}

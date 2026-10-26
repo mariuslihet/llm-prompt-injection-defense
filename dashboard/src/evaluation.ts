@@ -1,12 +1,13 @@
 export type EvidenceRow = {
   case_id?: string; scenario_id?: string; case: string; email: string; payload_sha256: string;
   run: {defense: string; status: string; attack_success: boolean; utility_success: boolean;
-    model_calls: number; duration_ms: number; answer: string; outcome_details?: Record<string,unknown>;
+    model_calls: number; duration_ms: number; answer: string; model_recoveries?:string[]; model_protocol_errors?:number; outcome_details?: Record<string,unknown>;
     effects: {tool: string}[]; events: {kind: string; details: Record<string,unknown>}[]};
 };
 
 export function matchesEvidence(record: EvidenceRow, filter: string): boolean {
   const run = record.run, outcome = run.outcome_details || {};
+  const grounding = outcome.grounding as {status?:string} | undefined;
   switch (filter) {
     case "attack": return run.attack_success;
     case "invalid": return ["error","budget-exhausted"].includes(run.status);
@@ -15,18 +16,23 @@ export function matchesEvidence(record: EvidenceRow, filter: string): boolean {
     case "disclosure": return outcome.confidentiality_violation === true;
     case "effects": return run.effects.length > 0;
     case "utility": return record.case === "benign" && !run.utility_success;
+    case "source-corrections": return ["corrected","recovered"].includes(grounding?.status || "");
+    case "source-withheld": return grounding?.status === "withheld";
     default: return true;
   }
 }
 
 export function summarizeEvidence(records: EvidenceRow[]) {
   const tools: Record<string,number> = {};
-  const outcomes = {integrity:0, disclosure:0, effects:0, invalid:0, normalSuccess:0, normalTotal:0};
+  const outcomes = {integrity:0, disclosure:0, effects:0, invalid:0, normalSuccess:0, normalTotal:0, sourceCorrections:0, sourceWithheld:0, normalCorrections:0, recoveredRuns:0, protocolErrors:0};
   for (const r of records) {
+    outcomes.recoveredRuns += r.run.model_recoveries?.length ? 1 : 0; outcomes.protocolErrors += r.run.model_protocol_errors || 0;
     for (const key of ["integrity","disclosure","effects","invalid"] as const) {
       if (matchesEvidence(r,key)) outcomes[key]++;
     }
     if (r.case === "benign") { outcomes.normalTotal++; if (r.run.utility_success) outcomes.normalSuccess++; }
+    if (matchesEvidence(r,"source-corrections")) {outcomes.sourceCorrections++;if(r.case === "benign") outcomes.normalCorrections++;}
+    if (matchesEvidence(r,"source-withheld")) outcomes.sourceWithheld++;
     for (const e of r.run.events) {
       // Count observed tool reads/effects, never merely proposed model actions.
       if (e.kind === "tool-result") {

@@ -66,3 +66,24 @@ expiry, role checks, atomic claim and single-use grant consumption precede a
 simulated effect. Restart marks executing reviews interrupted without retry.
 Tests: tests/test_review_queue.py and tests/test_restore_rehearsal.py. This is
 a single-worker SQLite contract, not a distributed exactly-once guarantee.
+
+
+## C6: source agreement for configured record workflows
+
+With source checks enforced, a successful covered full-IFC run returns the
+canonical fields derived by packages/ifc/grounding.py from its scoped adapter
+observations. Missing, invalid or mismatched evidence withholds the answer.
+Invoice/vendor linkage, typed incident impact and manager approval use fixed
+server-side rules; untrusted notes cannot redefine them. All proposal/evidence
+labels are joined conservatively. Final-program changes to canonical output fail
+closed. Tests: tests/test_grounding.py (including property tests, changed sources,
+private labels, all 30 cases and post-check rewriting).
+
+Argument: successful typed reads determine the finite canonical field set;
+model proposals only contribute comparison evidence. Enforce substitutes that
+canonical value, joins all input labels, then requires the final successful
+program answer to preserve its serialization. Exceptions withhold the answer.
+Therefore returned fields agree with the configured source resolver under the
+trusted-adapter/source-schema assumptions. This does not establish source truth,
+protection against corrupted authoritative fields, or coverage of arbitrary text
+tasks. Off/shadow modes do not establish this claim.

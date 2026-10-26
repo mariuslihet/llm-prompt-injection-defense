@@ -5,7 +5,7 @@ from pathlib import Path
 
 from agents.scenarios import SCENARIOS, Scenario
 
-CASE_PATH = Path(__file__).parents[1] / "lab" / "corpus" / "workflows-v1.json"
+CASE_PATH = Path(__file__).parents[1] / "lab" / "corpus" / "workflows-v2.json"
 
 
 def resolve_case(scenario_id: str, partition: str = "development", variation: int = 0) -> Scenario:

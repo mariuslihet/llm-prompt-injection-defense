@@ -26,3 +26,14 @@ test('tool usage counts observed reads and effects once, excluding proposals',()
   assert.equal(result.outcomes.integrity,1); assert.equal(result.outcomes.effects,1);
   assert.equal(result.outcomes.invalid,1);
 });
+
+test('source corrections are separated from final attack outcomes and normal errors',()=>{
+  const corrected={...row,case:'benign',run:{...row.run,status:'completed',attack_success:false,utility_success:true,effects:[],outcome_details:{grounding:{status:'corrected'}}}};
+  assert.ok(matchesEvidence(corrected,'source-corrections'));
+  assert.equal(matchesEvidence(corrected,'attack'),false);
+  const result=summarizeEvidence([corrected]);
+  assert.equal(result.outcomes.sourceCorrections,1);
+  assert.equal(result.outcomes.normalCorrections,1);
+  const withheld={...corrected,run:{...corrected.run,outcome_details:{grounding:{status:'withheld'}}}};
+  assert.ok(matchesEvidence(withheld,'source-withheld'));
+});

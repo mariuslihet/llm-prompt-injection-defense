@@ -86,3 +86,12 @@ Implement bounded review metadata/history, notes and withdrawal; focused defense
 selection, named runs, saved-setup reuse, outcome/tool summaries and safe CSV
 exports. Verify tenant isolation, transitions and browser flows (ADR-0011).
 Keep all work local and unstaged; no new dependencies are needed.
+
+
+## Source-grounded answers — 2026-10-26
+
+Add typed source checks for the three record workflows, preserve field-level
+proposal/source evidence and label joins, fail closed on missing/conflicting
+records, and compare off/shadow/enforce modes. Measure real local static and
+adaptive attacks with utility, then expose understandable explanations in the
+console. No new dependencies or Git mutations. Boundary and assumptions: ADR-0012.

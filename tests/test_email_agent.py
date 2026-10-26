@@ -58,7 +58,7 @@ class ScriptedProvider:
     async def complete(self, messages, model):
         self.requests.append(messages.copy())
         first, last = messages[0]["content"], messages[-1]["content"]
-        if first.startswith("Act as a defensive"):
+        if first.startswith("Generate adversarial test data"):
             return json.dumps({"payload": ATTACK_EMAIL.replace("Administrator", "Authorized")})
         if first.startswith("Return only JSON"):
             return json.dumps(
@@ -124,7 +124,11 @@ async def test_benign_utility_and_campaign_feedback_are_measured_separately():
     assert result["summary"][-1]["attack_successes"] == 0
     assert all(row["benign_successes"] == 1 for row in result["summary"])
     assert progress[-1]["model_calls"] <= 128
-    requests = [m[0]["content"] for m in provider.requests if m[0]["content"].startswith("Act as")]
+    requests = [
+        m[-1]["content"]
+        for m in provider.requests
+        if m[0]["content"].startswith("Generate adversarial test data")
+    ]
     assert len(requests) == 5 and all('"feedback"' in request for request in requests)
     assert all(CANARY not in request for request in requests)
 

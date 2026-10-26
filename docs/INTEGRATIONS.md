@@ -97,3 +97,20 @@ returns its saved spec for deliberate reuse. Campaigns retain 128 model calls;
 suites reserve 6 × selected-defense count × max(2, max_turns) calls. The 600-second
 deadline, tenant quotas and single-worker execution remain unchanged.
 Dataset fingerprints include the defense selection/order but exclude the title.
+
+
+## Source answer checks
+
+RunSpec accepts grounding = off | shadow | enforce (default enforce). It applies
+only to full-ifc runs on the three structured record workflows. Returned
+outcome_details.grounding contains mode, status, corrected_fields, checks and the
+original proposed_answer when checks succeed. Each check records field, proposed,
+source_value, matched, sources and rule. Source validation failures return blocked
+with source_validation_failed and no answer. These sample-data traces must not
+be treated as a general private-data logging integration.
+
+Matched comparisons report grounding_changed. Mode is treatment configuration,
+not a dataset input. Dataset fingerprints include the workflow adapter contract;
+older inputs must be rerun when that contract changes. CLI: --grounding enforce.
+Reproducible local ablation: python -m eval.grounding_ablation (600-second total
+deadline, off/shadow/enforce, static and feedback-driven attempts).

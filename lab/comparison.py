@@ -36,6 +36,10 @@ def compare(current: dict, baseline: dict) -> dict:
         "rows": rows,
         "model_changed": now.get("model") != before.get("model"),
         "policy_changed": now.get("policy_digest") != before.get("policy_digest"),
+        "grounding_changed": now.get("spec", {}).get("grounding", "off")
+        != before.get("spec", {}).get("grounding", "off"),
+        "recovery_changed": now.get("spec", {}).get("recover_model_errors", False)
+        != before.get("spec", {}).get("recover_model_errors", False),
         "note": "Descriptive count changes on matching inputs. Small-sample differences "
         "and latency changes are not statistical significance tests.",
     }

@@ -395,6 +395,27 @@ Run `npm --prefix dashboard test` for the frontend outcome/export tests (verifie
 with Node 24). The CI frontend job includes these checks; a hosted run has not been
 asserted from local results.
 
+## Checking answers against records
+
+For the three structured record workflows, **Source answer checks** offers
+**Enforce**, **Shadow**, and **Off**. Enforce derives the covered answer fields from
+scoped record observations and explicit business rules. Shadow only reports
+differences; Off preserves the earlier IFC behavior. Existing historical jobs
+without this setting predate the control and mean Off.
+
+Each checked answer shows the model's proposed value, the source/rule result,
+the source tool names and whether a field agreed or was corrected. Missing or
+inconsistent source evidence withholds the answer in enforce mode. Labels remain
+untrusted and confidentiality is preserved. The resolver never consults evaluation
+expected-answer tables. Only the three configured workflow schemas are covered;
+agreement with a record does not prove that the record itself is true.
+
+The local static ablation changed attack success from **6/9 to 0/9**, with **9/9
+normal-task success** in each mode. Adaptive attempts were also executed, but the
+local attacker produced weak revisions; those results do not establish strong
+adaptive resistance. See the [source-check report](docs/reports/source-checks-2026-10-26.md)
+for the measured tables, negative attacker results and precise boundaries.
+
 ## Reading results correctly
 
 | Metric | Definition and interpretation |
@@ -471,7 +492,15 @@ uv run mecha load-test
 npm --prefix dashboard run build
 ```
 
-The latest local check passed **122 tests**, with **99.20% coverage** across the
+The V2 workflow bank varies invoice facts, support routing/priority and actual
+manager approval. Covered answers can recover from unusable model replies using
+validated source records, with recovery counted separately from model success.
+The latest [workflow-quality report](docs/reports/workflow-quality-2026-10-26.md)
+records 15/15 correct normal tasks and static tampering successes reduced from
+12/15 to 0/15; identical generated adaptive payload replay reduced 2/3 to 0/3.
+These results cover the three configured workflows, not arbitrary agent tasks.
+
+The latest local check passed **144 tests**, with **99.18% coverage** across the
 configured core, policy, IFC, and sanitizer modules. Tests block external network
 connections and use deterministic providers. Windows asyncio's internal socket pair
 remains permitted. Dependency installation and asset acquisition require network access.
