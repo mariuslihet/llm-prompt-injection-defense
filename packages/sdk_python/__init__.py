@@ -2,8 +2,23 @@
 
 import uuid
 from collections.abc import AsyncIterator
+from typing import Literal
 
 import httpx
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class InspectionResult(BaseModel):
+    """A detector and sanitizer preview, not an authorization decision."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    source: Literal["email", "web", "document", "retrieved", "tool", "memory", "other"]
+    decision: Literal["allow", "block", "flag", "shadow"]
+    score: float = Field(ge=0, le=1, allow_inf_nan=False)
+    reasons: tuple[str, ...]
+    sanitized_text: str
+    sanitizer_findings: tuple[str, ...]
+    scope: str
 
 
 class Mecha:
@@ -18,6 +33,23 @@ class Mecha:
 
     async def close(self) -> None:
         await self.client.aclose()
+
+    async def inspect(
+        self,
+        content: str,
+        source: Literal[
+            "email", "web", "document", "retrieved", "tool", "memory", "other"
+        ] = "other",
+    ) -> InspectionResult:
+        """Inspect sample text; the result does not authorize tool execution."""
+        response = await self.client.post(
+            "/inspection", json={"source": source, "content": content}
+        )
+        response.raise_for_status()
+        result = InspectionResult.model_validate(response.json())
+        if result.source != source:
+            raise ValueError("inspection response source does not match request")
+        return result
 
     async def start_agent(
         self,
@@ -56,7 +88,10 @@ class Mecha:
             json={"model": model, "messages": [{"role": "user", "content": content}]},
         )
         response.raise_for_status()
-        return str(response.json()["choices"][0]["message"]["content"])
+        content = response.json()["choices"][0]["message"]["content"]
+        if not isinstance(content, str):
+            raise ValueError("invalid gateway response content")
+        return content
 
     async def stream(self, content: str) -> AsyncIterator[str]:
         async with self.client.stream(

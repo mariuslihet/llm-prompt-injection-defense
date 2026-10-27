@@ -203,6 +203,13 @@ def evaluate(output: Path, seed: int = 42, budget: int = 8) -> dict[str, object]
         "python": platform.python_version(),
         "platform": platform.platform(),
         "corpus_sha256": hashlib.sha256(CORPUS.read_bytes()).hexdigest(),
+        "corpus_diversity": {
+            "entries": len(attacks),
+            "distinct_payload_strings": len({attack.payload for attack in attacks}),
+            "distinct_effective_inputs": len(
+                {"\n".join(attack.turns) or attack.payload for attack in attacks}
+            ),
+        },
         "policy_digest": POLICY.digest,
         "rows": rows,
         "ci_note": "Wilson intervals are descriptive; correlated templates are not independent.",
@@ -221,7 +228,9 @@ def evaluate(output: Path, seed: int = 42, budget: int = 8) -> dict[str, object]
     output.with_suffix(".html").write_text(
         "<!doctype html><html lang=en><meta charset=utf-8>"
         "<title>Mecha fixture benchmark</title><h1>Synthetic mock benchmark</h1>"
-        "<p>Not real-model or upstream benchmark evidence. Correlated template trials.</p>"
+        "<p>Not real-model or upstream benchmark evidence. Correlated template trials. "
+        f"{report['corpus_diversity']['distinct_payload_strings']} distinct payload strings "
+        f"across {len(attacks)} corpus entries.</p>"
         "<table><caption>Static/adaptive comparison and utility</caption><thead><tr>"
         "<th>Configuration</th><th>Adaptive</th><th>ASR</th><th>Utility</th><th>FPR</th>"
         "<th>p95 ms</th></tr></thead><tbody>" + table + "</tbody></table></html>",

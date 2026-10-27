@@ -500,7 +500,50 @@ records 15/15 correct normal tasks and static tampering successes reduced from
 12/15 to 0/15; identical generated adaptive payload replay reduced 2/3 to 0/3.
 These results cover the three configured workflows, not arbitrary agent tasks.
 
-The latest local check passed **144 tests**, with **99.18% coverage** across the
+In Agent Evaluation, **Business suite coverage** can run the selected variation
+or all five variations. The latter runs 15 normal tasks and 15 static attacks
+per defense, with up to two defenses per run. Each result shows the case input,
+recorded execution, source checks and a comparison of expected and returned
+fields. The suite uses locally authored sample cases; adaptive testing remains
+available separately and these results do not establish general protection.
+
+In **Security Tests → Inspect content**, paste sample text from an email, page,
+document, retrieved content, tool output or memory. Mecha reports the configured
+detector decision and indicators, then shows a sanitized preview. This is a
+preview; it does not execute an agent or prove that content is safe. The source
+selection labels the sample and does not change the detection rules.
+
+Use **Compare a set of inputs** to label and inspect up to 12 samples together.
+It shows detected and missed labeled attacks alongside ordinary inputs flagged by
+mistake. Labels are supplied by the operator, and these counts measure detection,
+not an attack's success against an agent. Results and sample inputs can be
+downloaded as JSON.
+
+The approval-bypass indicator can flag wording that combines approval with a
+missing approval. By itself it flags for review rather than blocking; a separate
+corroborating signal can block. The [ablation](docs/reports/approval-indicator-2026-10-27.md)
+shows both a false positive and an adaptive evasion.
+
+In **Security Policy → Test a policy decision**, compare an action under the active
+policy with and without hypothetical approval. Change an argument's origin and
+tool permission to see why the policy would allow, require approval or deny it.
+The simulator issues no approval and executes no tools.
+
+The interpreter stops a program after a denied tool call. In **Security Tests →
+Test a multi-step action**, compare a denial at the start with one after an
+earlier sample action. The trace shows skipped instructions and preserves earlier
+effects; stopping does not undo actions that have already happened. The two
+examples use fixed, simulated tools and do not send email or perform external
+actions. A denied step is counted as processed, not as a completed tool action.
+Later approval grants are not consumed after the program stops.
+
+The [execution report](docs/reports/interpreter-halt-2026-10-27.md) describes the
+tests and their limits. In the deterministic offline evaluation, the full IFC
+configuration completed 280 of 336 ordinary tasks before and after this change;
+this exposes a usability cost and does not measure performance on arbitrary real
+workflows.
+
+The latest local check passed **188 tests**, with **99.19% coverage** across the
 configured core, policy, IFC, and sanitizer modules. Tests block external network
 connections and use deterministic providers. Windows asyncio's internal socket pair
 remains permitted. Dependency installation and asset acquisition require network access.

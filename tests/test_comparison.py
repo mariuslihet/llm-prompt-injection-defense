@@ -1,3 +1,4 @@
+from argparse import Namespace
 from copy import deepcopy
 
 import pytest
@@ -45,6 +46,66 @@ def test_comparison_rejects_mismatches_and_marks_invalid_results_inconclusive():
         compare(current, previous)
 
 
+def test_adaptive_comparison_requires_actual_matching_generated_inputs():
+    current, previous = job(), job()
+    for value in (current, previous):
+        value["result"]["spec"] = {"adaptive_rounds": 1}
+        value["result"]["records"] = [
+            {
+                "case": "adaptive",
+                "case_id": "case-1",
+                "round": 1,
+                "payload_sha256": "first",
+                "run": {"defense": "full-ifc"},
+            }
+        ]
+    assert compare(current, previous)["rows"][0]["status"] == "unchanged"
+    current["result"]["records"][0]["payload_sha256"] = "different"
+    with pytest.raises(ValueError, match="adaptive attack inputs differ"):
+        compare(current, previous)
+    current["result"]["records"] = []
+    with pytest.raises(ValueError, match="missing"):
+        compare(current, previous)
+
+
+def test_comparison_handles_missing_latency():
+    current, previous = job(), job()
+    current["result"]["summary"][0]["p95_ms"] = None
+    assert compare(current, previous)["rows"][0]["p95_delta_ms"] is None
+
+
+@pytest.mark.anyio
+async def test_model_report_identifies_the_case_bank_actually_used(tmp_path, monkeypatch):
+    from eval import agent_run
+
+    monkeypatch.setattr(agent_run, "configured_provider", lambda kind: ScriptedProvider())
+    args = Namespace(
+        model_path=None,
+        provider="mock",
+        grounding="off",
+        no_model_recovery=False,
+        title="test",
+        defenses=["full-ifc"],
+        suite=False,
+        campaign=False,
+        defense="full-ifc",
+        adaptive_rounds=0,
+        email=None,
+        scenario="launch",
+        partition="development",
+        variation=0,
+        goal="exfiltration",
+        channel="email",
+        max_turns=6,
+        model="test",
+        output=tmp_path / "report.json",
+    )
+    result = await agent_run.run(args)
+    assert "lab/corpus/workflows-v2.json" in result["source_sha256"]
+    assert "packages/ifc/grounding.py" in result["source_sha256"]
+    assert "lab/corpus/workflows-v1.json" not in result["source_sha256"]
+
+
 @pytest.mark.anyio
 async def test_suite_executes_all_scenarios_with_shared_bounded_calls_and_snapshot():
     progress = []
@@ -76,6 +137,40 @@ async def test_suite_executes_all_scenarios_with_shared_bounded_calls_and_snapsh
     assert all(r["benign_trials"] == 3 and r["attack_trials"] == 3 for r in result["summary"])
     with pytest.raises(ValueError, match="static"):
         RunSpec(kind="suite", adaptive_rounds=2)
+
+
+@pytest.mark.anyio
+async def test_extended_suite_runs_each_variation_with_distinct_case_evidence():
+    async def update(value):
+        pass
+
+    spec = RunSpec(
+        kind="suite",
+        adaptive_rounds=0,
+        suite_variations="all",
+        selected_defenses=("full-ifc",),
+        max_turns=4,
+    )
+    result = await execute(spec, ScriptedProvider(), "script", POLICY, "tenant", update)
+    assert len(result["records"]) == 30
+    assert len({row["case_id"] for row in result["records"]}) == 15
+    assert len({row["case_id"] for row in result["scenario_results"]}) == 15
+    assert result["summary"][0]["benign_trials"] == 15
+    assert result["summary"][0]["attack_trials"] == 15
+    assert result["model_calls"] <= 120
+    other_selection = await execute(
+        spec.model_copy(update={"variation": 4}),
+        ScriptedProvider(),
+        "script",
+        POLICY,
+        "tenant",
+        update,
+    )
+    assert result["dataset_digest"] == other_selection["dataset_digest"]
+    with pytest.raises(ValueError, match="at most two"):
+        RunSpec(kind="suite", adaptive_rounds=0, suite_variations="all")
+    with pytest.raises(ValueError, match="only for the business suite"):
+        RunSpec(kind="agent", suite_variations="all", selected_defenses=("full-ifc",))
 
 
 @pytest.mark.anyio

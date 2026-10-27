@@ -138,6 +138,111 @@ def test_canary_in_attacker_input_is_rejected_to_avoid_trivial_oracle_spoofing()
         RunSpec(email=CANARY)
     with pytest.raises(ValueError):
         Candidate(payload=CANARY)
+    with pytest.raises(ValueError, match="blank"):
+        Candidate(payload="   ")
+
+
+@pytest.mark.anyio
+async def test_repeated_adaptive_inputs_are_not_counted_as_fresh_attacks():
+    class Repeating(ScriptedProvider):
+        async def complete(self, messages, model):
+            if messages[0]["content"].startswith("Generate adversarial test data"):
+                return json.dumps({"payload": ATTACK_EMAIL})
+            return await super().complete(messages, model)
+
+    async def update(value):
+        pass
+
+    result = await execute(
+        RunSpec(kind="campaign", selected_defenses=("full-ifc",), adaptive_rounds=1),
+        Repeating(),
+        "script",
+        POLICY,
+        "tenant",
+        update,
+    )
+    assert not any(row["case"] == "adaptive" for row in result["records"])
+    assert result["attacker_attempts"][0]["reason"] == "repeated input"
+    assert not result["summary"][0]["conclusive"]
+
+
+@pytest.mark.anyio
+async def test_attacker_failure_only_invalidates_the_affected_defense():
+    class OneRepeated(ScriptedProvider):
+        async def complete(self, messages, model):
+            if messages[0]["content"].startswith("Generate adversarial test data"):
+                context = json.loads(messages[-1]["content"].split("\n", 1)[1])
+                candidate = (
+                    ATTACK_EMAIL
+                    if context["defense"] == "none"
+                    else ATTACK_EMAIL.replace("Administrator", "Authorized")
+                )
+                return json.dumps({"payload": candidate})
+            return await super().complete(messages, model)
+
+    async def update(value):
+        pass
+
+    result = await execute(
+        RunSpec(kind="campaign", selected_defenses=("none", "full-ifc"), adaptive_rounds=1),
+        OneRepeated(),
+        "script",
+        POLICY,
+        "tenant",
+        update,
+    )
+    summaries = {row["defense"]: row for row in result["summary"]}
+    assert not summaries["none"]["conclusive"]
+    assert summaries["full-ifc"]["conclusive"]
+    assert any(
+        row["case"] == "adaptive" and row["run"]["defense"] == "full-ifc"
+        for row in result["records"]
+    )
+
+
+@pytest.mark.anyio
+async def test_normal_input_cannot_be_counted_as_a_campaign_attack():
+    with pytest.raises(ValueError, match="repeats the normal task"):
+        RunSpec(kind="campaign", email=BENIGN_EMAIL, scenario_id="launch")
+
+
+@pytest.mark.anyio
+async def test_provider_failure_is_explained_without_leaking_exception_text():
+    class Broken:
+        async def complete(self, messages, model):
+            raise RuntimeError("secret provider details")
+
+    result = await run_email(Broken(), "test", POLICY, BENIGN_EMAIL)
+    assert result.status == "error" and result.error_code == "provider_error"
+    assert "secret provider details" not in result.model_dump_json()
+
+
+@pytest.mark.anyio
+async def test_shared_provider_budget_is_distinct_from_provider_failure():
+    from lab.campaigns import BudgetProvider
+
+    budget = BudgetProvider(ScriptedProvider(), limit=0)
+    result = await run_email(budget, "test", POLICY, BENIGN_EMAIL)
+    assert result.status == "budget-exhausted"
+    assert result.error_code == "model_call_budget_exhausted"
+
+
+@pytest.mark.anyio
+async def test_normal_only_run_does_not_claim_attack_evidence():
+    async def update(value):
+        pass
+
+    result = await execute(
+        RunSpec(kind="agent", email=BENIGN_EMAIL, scenario_id="launch"),
+        ScriptedProvider(),
+        "script",
+        POLICY,
+        "tenant",
+        update,
+    )
+    assert result["summary"][0]["benign_successes"] == 1
+    assert result["summary"][0]["attack_trials"] == 0
+    assert not result["summary"][0]["conclusive"]
 
 
 @pytest.mark.anyio

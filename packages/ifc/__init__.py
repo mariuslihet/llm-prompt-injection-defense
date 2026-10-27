@@ -1,6 +1,6 @@
 """A bounded, linear DSL. No eval/exec, branching, imports, loops or raw tool access."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -86,8 +86,12 @@ class Interpreter:
         self.effects: list[tuple[str, dict[str, str]]] = []
         self.shadow_decisions: list[Decision] = []
         self.trace: list[TraceStep] = []
+        self.halted_at: int | None = None
+        self.skipped_instructions = 0
 
     def run(self, program: Program, inputs: dict[str, Value]) -> dict[str, Value]:
+        self.halted_at = None
+        self.skipped_instructions = 0
         # Validate every reference before any effect, including later instructions.
         known = set(inputs)
         for instruction in program.instructions:
@@ -157,6 +161,9 @@ class Interpreter:
                     TraceStep(
                         index=index,
                         op="call",
+                        tool=cast(Literal["send_email", "fetch_url", "summarize"], instruction.tool)
+                        if instruction.tool in {"send_email", "fetch_url", "summarize"}
+                        else "other",
                         inputs=tuple(LabelSnapshot.of(v) for v in arguments.values()),
                         decision=decision,
                     )
@@ -169,6 +176,12 @@ class Interpreter:
                     self.effects.append(
                         (instruction.tool, {k: v.data for k, v in arguments.items()})
                     )
+                else:
+                    # A rejected action must not be followed by later instructions.
+                    # Earlier effects cannot be undone; they remain in the trace.
+                    self.halted_at = index
+                    self.skipped_instructions = len(program.instructions) - index - 1
+                    break
         return values
 
     def snapshot(self) -> ExecutionTrace:
@@ -176,6 +189,8 @@ class Interpreter:
             policy_digest=self.policy.digest,
             steps=tuple(self.trace),
             effect_count=len(self.effects),
+            halted_at=self.halted_at,
+            skipped_instructions=self.skipped_instructions,
         )
 
     @staticmethod

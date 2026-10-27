@@ -5,6 +5,40 @@ export type EvidenceRow = {
     effects: {tool: string}[]; events: {kind: string; details: Record<string,unknown>}[]};
 };
 
+export function describeApiError(body: unknown, status: number): string {
+  if (body && typeof body === "object" && "detail" in body) {
+    const detail = body.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (Array.isArray(detail)) {
+      const messages = detail.map(item =>
+        item && typeof item === "object" && typeof item.msg === "string" ? item.msg.replace(/^Value error,\s*/i, "") : ""
+      ).filter(Boolean);
+      if (messages.length) return messages.join("; ");
+    }
+  }
+  return `Request failed (HTTP ${status}).`;
+}
+
+export function describeRunFailure(status: string, code?: string | null): string | null {
+  if (status === "budget-exhausted") return "The run ended before completion because its model-call or turn limit was reached.";
+  if (code === "provider_error") return "The model provider failed. Check that the configured model is running and reachable.";
+  if (code === "source_validation_failed") return "The answer was withheld because required source checks could not be completed.";
+  if (status === "error") return "The model response or restricted program could not be validated. Inspect the timeline for details.";
+  return null;
+}
+
+export function factRows(outcome?: Record<string,unknown>) {
+  const expected = outcome?.expected, facts = outcome?.facts, matches = outcome?.matches;
+  if (!expected || typeof expected !== "object" || Array.isArray(expected)) return [];
+  const actual = facts && typeof facts === "object" && !Array.isArray(facts) ? facts as Record<string,unknown> : {};
+  const checks = matches && typeof matches === "object" && !Array.isArray(matches) ? matches as Record<string,unknown> : {};
+  return Object.entries(expected).map(([field, value]) => ({
+    field, expected: String(value ?? "Unavailable"),
+    actual: actual[field] == null ? "Unavailable" : String(actual[field]),
+    result: checks[field] === true ? "Matches" : checks[field] === false ? "Differs" : "Unavailable",
+  }));
+}
+
 export function matchesEvidence(record: EvidenceRow, filter: string): boolean {
   const run = record.run, outcome = run.outcome_details || {};
   const grounding = outcome.grounding as {status?:string} | undefined;

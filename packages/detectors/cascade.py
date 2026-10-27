@@ -58,23 +58,29 @@ class Cascade:
     async def inspect(self, text: str) -> Detection:
         evidence = detect(text, threshold=self.config.threshold)
         score, reasons = evidence.score, list(evidence.reasons)
+        corroborated = any(reason != "approval-bypass" for reason in reasons)
         if self.classifier:
             from anyio import to_thread
 
             predicted = await to_thread.run_sync(self.classifier.score, text)
             score = max(score, JudgeScore(score=predicted).score)
+            corroborated = corroborated or predicted >= self.config.threshold
             reasons.append("local-classifier")
         if self.judge and self.config.borderline_low <= score <= self.config.borderline_high:
             try:
-                score = max(score, await self.judge.score(text))
+                judged = await self.judge.score(text)
+                score = max(score, judged)
+                corroborated = corroborated or judged >= self.config.threshold
                 reasons.append("optional-judge")
             except (ValueError, json.JSONDecodeError):
                 # Invalid judge output fails closed; never treat parser failure as clean.
                 score = 1.0
+                corroborated = True
                 reasons.append("judge-error")
-        return Detection(
-            score, tuple(reasons), self.config.mode if score >= self.config.threshold else "allow"
-        )
+        action = self.config.mode if score >= self.config.threshold else "allow"
+        if action == "block" and "approval-bypass" in reasons and not corroborated:
+            action = "flag"
+        return Detection(score, tuple(reasons), action)
 
 
 def calibrate(benign: list[float], attacks: list[float], max_fpr: float = 0.05) -> dict[str, float]:

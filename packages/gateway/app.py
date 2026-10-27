@@ -16,7 +16,7 @@ import yaml
 from anyio import to_thread
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from packages.core import Confidentiality, Label, Segment, Trust, Value
@@ -138,6 +138,29 @@ class ChatRequest(BaseModel):
     max_tokens: int = Field(default=1024, ge=1, le=4096)
 
 
+class ContentInspection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["email", "web", "document", "retrieved", "tool", "memory", "other"]
+    content: str = Field(min_length=1, max_length=32768, pattern=r"\S")
+
+
+class InspectionCase(ContentInspection):
+    id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+    expected: Literal["attack", "ordinary", "unlabeled"]
+    content: str = Field(min_length=1, max_length=4096, pattern=r"\S")
+
+
+class InspectionBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cases: list[InspectionCase] = Field(min_length=1, max_length=12)
+
+    @model_validator(mode="after")
+    def unique_ids(self):
+        if len({case.id for case in self.cases}) != len(self.cases):
+            raise ValueError("case IDs must be unique")
+        return self
+
+
 class ApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     tool: Literal["send_email", "fetch_url"]
@@ -172,6 +195,28 @@ class PolicyEdit(BaseModel):
     dry_run: bool = True
 
 
+class SimulationValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    value: str = Field(min_length=1, max_length=2048)
+    origin: Literal["trusted", "untrusted", "private"]
+    private: bool = Field(default=False, strict=True)
+    sink_allowed: bool = Field(strict=True)
+
+
+class PolicySimulation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tool: Literal["send_email", "fetch_url"]
+    arguments: dict[str, SimulationValue]
+    untrusted_context: bool = Field(default=False, strict=True)
+
+    @model_validator(mode="after")
+    def argument_shape(self):
+        expected = {"recipient", "body"} if self.tool == "send_email" else {"url"}
+        if set(self.arguments) != expected:
+            raise ValueError("arguments must match the selected tool")
+        return self
+
+
 class Revision(BaseModel):
     revision: int = Field(ge=1)
 
@@ -187,6 +232,12 @@ class IFCRun(BaseModel):
     task: Literal["summarize", "email-summary"] = "summarize"
     document: str = Field(max_length=32768)
     recipient: str = Field(default="team@example.invalid", max_length=254)
+
+
+class IFCSequenceTest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    document: str = Field(min_length=1, max_length=4096, pattern=r"\S")
+    variant: Literal["deny_first", "allow_then_deny"] = "deny_first"
 
 
 class RPC(BaseModel):
@@ -348,6 +399,86 @@ def create_app(
             return {"status": "ready", "storage": "sqlite", "worker_mode": "single"}
         except sqlite3.Error as exc:
             raise HTTPException(503, "storage unavailable") from exc
+
+    @api.post("/inspection")
+    async def inspect_content(body: ContentInspection, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        try:
+            result = await detector.inspect(body.content)
+            preview = sanitize(body.content)
+        except Exception as exc:
+            raise HTTPException(503, "inspection unavailable") from exc
+        await append_decision(
+            tenant,
+            {
+                "action": "inspect",
+                "rule": "content-inspection",
+                "reason": f"source:{body.source}; decision:{result.action}; "
+                f"signals:{','.join(result.reasons)}",
+            },
+        )
+        return {
+            "source": body.source,
+            "decision": result.action,
+            "score": result.score,
+            "reasons": result.reasons,
+            "sanitized_text": preview.text,
+            "sanitizer_findings": preview.findings,
+            "scope": "Inspection preview only; no agent workflow or tools were run. "
+            "The configured detector may use a classifier or judge model.",
+        }
+
+    @api.post("/inspection/batch")
+    async def inspect_batch(body: InspectionBatch, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        cases = []
+        try:
+            for case in body.cases:
+                detection = await detector.inspect(case.content)
+                preview = sanitize(case.content)
+                flagged = detection.action in {"block", "flag", "shadow"}
+                cases.append(
+                    {
+                        "id": case.id,
+                        "source": case.source,
+                        "expected": case.expected,
+                        "decision": detection.action,
+                        "flagged": flagged,
+                        "valid": "judge-error" not in detection.reasons,
+                        "score": detection.score,
+                        "reasons": detection.reasons,
+                        "sanitized_text": preview.text,
+                        "sanitizer_findings": preview.findings,
+                    }
+                )
+        except Exception as exc:
+            raise HTTPException(503, "batch inspection unavailable; no results recorded") from exc
+        attacks = [case for case in cases if case["expected"] == "attack" and case["valid"]]
+        normal = [case for case in cases if case["expected"] == "ordinary" and case["valid"]]
+        detected = sum(case["flagged"] for case in attacks)
+        false_flags = sum(case["flagged"] for case in normal)
+        await append_decision(
+            tenant,
+            {"action": "inspect", "rule": "content-inspection-batch", "count": len(cases)},
+        )
+        return {
+            "cases": cases,
+            "summary": {
+                "total": len(cases),
+                "labeled_attacks": len(attacks),
+                "detected_attacks": detected,
+                "missed_attacks": len(attacks) - detected,
+                "ordinary_cases": len(normal),
+                "false_flags": false_flags,
+                "unlabeled_cases": sum(case["expected"] == "unlabeled" for case in cases),
+                "invalid_cases": sum(not case["valid"] for case in cases),
+                "detection_rate": detected / len(attacks) if attacks else None,
+                "false_flag_rate": false_flags / len(normal) if normal else None,
+            },
+            "scope": "Operator labels are assumptions, not verified truth. Flag and shadow "
+            "count as detections but do not block. Invalid judge results are inconclusive "
+            "and excluded from rates. No agent workflow or tools were run.",
+        }
 
     @api.get("/lab/config")
     async def lab_config(
@@ -857,6 +988,50 @@ def create_app(
             "simulated": True,
         }
 
+    @api.post("/ifc/sequence-test")
+    async def ifc_sequence_test(body: IFCSequenceTest, auth: Auth):
+        tenant = require(auth, {"operator", "admin"})
+        summarize = {"op": "call", "tool": "summarize", "arguments": {"text": "document"}}
+        denied = {
+            "op": "call",
+            "tool": "send_email",
+            "arguments": {"recipient": "recipient", "body": "message"},
+        }
+        instructions = ([summarize] if body.variant == "allow_then_deny" else []) + [
+            denied,
+            summarize,
+        ]
+        runtime = Interpreter(store.get(tenant), tenant)
+        runtime.run(
+            Program.model_validate({"instructions": instructions}),
+            {
+                "document": untrusted_value(body.document),
+                "recipient": untrusted_value("collector@example.invalid"),
+                "message": trusted_value("Sample report", sinks=frozenset({"send_email"})),
+            },
+        )
+        trace = runtime.snapshot()
+        await append_decision(
+            tenant,
+            {
+                "action": "simulate",
+                "rule": "ifc-sequence-test",
+                "reason": body.variant,
+                "trace": trace.model_dump_json(),
+            },
+        )
+        return {
+            "variant": body.variant,
+            "planned_instructions": len(instructions),
+            "trace": trace.model_dump(mode="json"),
+            "simulated_effects": [
+                {"tool": tool, "text": sanitize(arguments.get("text", "")).text}
+                for tool, arguments in runtime.effects
+            ],
+            "scope": "Repository-owned sample tools only; no external action or approval. "
+            "Earlier recorded actions are not rolled back when a later action is denied.",
+        }
+
     @api.get("/incidents/{digest}")
     async def incident_get(digest: str, auth: Auth):
         result = ledger.incident(auth[0], digest)
@@ -882,6 +1057,46 @@ def create_app(
             "digest": current.digest,
             "text": store.text(tenant),
             "history": store.history(tenant),
+        }
+
+    @api.post("/policy/simulate")
+    async def policy_simulate(body: PolicySimulation, auth: Auth):
+        tenant = require(auth, {"viewer", "operator", "admin"})
+        values = {
+            name: Value(
+                data=item.value,
+                label=Label(
+                    sources=frozenset({"simulation"}),
+                    trust=Trust.UNTRUSTED if item.origin == "untrusted" else Trust.TRUSTED,
+                    confidentiality=Confidentiality.PRIVATE
+                    if item.origin == "private" or item.private
+                    else Confidentiality.PUBLIC,
+                    allowed_sinks=frozenset({body.tool}) if item.sink_allowed else frozenset(),
+                ),
+            )
+            for name, item in body.arguments.items()
+        }
+        read_untrusted = body.untrusted_context or any(
+            value.label.trust == Trust.UNTRUSTED for value in values.values()
+        )
+        policy = store.get(tenant)
+        without = evaluate(policy, body.tool, values, read_untrusted=read_untrusted)
+        with_approval = evaluate(
+            policy, body.tool, values, read_untrusted=read_untrusted, approved=True
+        )
+        await append_decision(
+            tenant, {"action": "simulate", "rule": "policy-simulation", "reason": body.tool}
+        )
+        return {
+            "policy_digest": policy.digest,
+            "policy_mode": policy.mode,
+            "tool": body.tool,
+            "read_untrusted": read_untrusted,
+            "without_approval": without.model_dump(),
+            "with_approval": with_approval.model_dump(),
+            "simulated": True,
+            "scope": "Hypothetical policy decisions only. Labels are test inputs; no approval "
+            "is issued, no tool runs and no external action occurs.",
         }
 
     @api.post("/policy/stage")

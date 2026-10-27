@@ -14,6 +14,10 @@ class Provider(Protocol):
     async def complete(self, messages: list[dict[str, str]], model: str) -> str: ...
 
 
+class ProviderBudgetExceeded(ValueError):
+    """The evaluation exhausted its shared model-call budget."""
+
+
 class MockProvider:
     async def complete(self, messages: list[dict[str, str]], model: str) -> str:
         return "Mock response: " + messages[-1]["content"][:4096]

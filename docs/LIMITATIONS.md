@@ -3,7 +3,9 @@
 Mecha is a working offline research prototype, not a certified production
 security boundary or a claim of general prompt-injection prevention.
 
-- The 168 attacks share a synthetic command grammar and three agents share the
+- The 168 corpus entries contain 101 distinct payload strings; some represent
+  the same text under different categories or channels. They share a synthetic
+  command grammar and three agents share the
   same unsafe follower. Fixture ASR cannot predict real-model ASR. Template
   trials are correlated, so Wilson intervals are descriptive only.
 - The 336 normal-task tasks vary fixture content and task type, not real reasoning

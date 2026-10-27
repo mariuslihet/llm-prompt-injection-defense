@@ -15,6 +15,7 @@ Direct modification of these components is outside the threat model.
 | C5 | An approval grant is tenant/policy/tool/argument/label-bound, expires and is consumed at most once. | tests/test_structural.py::test_approval_binding_single_use_tenant_policy_arguments_and_expiry; tests/test_gateway.py::test_human_approval_end_to_end_and_replay |
 | C6 | Unknown tools, wrong argument shapes and external tools mislabeled as internal fail closed. | tests/test_structural.py::test_policy_fail_closed_and_static_verifier; tests/test_extensions.py::test_intrinsic_sink_and_taint_fallback |
 | C7 | Quarantine extraction preserves labels; programs cannot overwrite prior values or invoke arbitrary Python. | tests/test_structural.py::test_interpreter_extraction_concat_unknowns_and_ssa |
+| C8 | Within one interpreter invocation, no instruction after a denied tool call is executed. Earlier recorded effects are not rolled back. | tests/test_ifc_halt.py::test_no_later_instructions_run_after_policy_denial; tests/test_ifc_halt.py::test_denial_does_not_undo_prior_effects_or_consume_later_grants |
 
 ## Argument sketch
 
@@ -28,6 +29,11 @@ capability, confidentiality and invocation-wide untrusted control taint. A grant
 can bypass only the final approval barrier. It cannot bypass the preceding
 checks. Therefore C1-C4 hold for every reachable call in this DSL, assuming the
 trusted computing base and the correctness of the label assignment.
+
+For C8, the interpreter records the denied decision and terminates the instruction
+loop before resolving any later call. A denial does not reverse earlier effects.
+Use a fresh interpreter for each request; its history is cumulative if reused,
+while halt metadata describes the most recent invocation.
 
 The approval map is locked; consume atomically removes its token before checking
 binding/expiry. A failed reuse cannot find the grant. A canonical policy hash and

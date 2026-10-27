@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {csvCell, evidenceCsv, matchesEvidence, summarizeEvidence} from '../src/evaluation.ts';
+import {csvCell, describeApiError, describeRunFailure, evidenceCsv, factRows, matchesEvidence, summarizeEvidence} from '../src/evaluation.ts';
 
 const row = {case:'static',email:'=HYPERLINK("https://example.invalid")',payload_sha256:'abc',run:{
   defense:'none',status:'error',attack_success:true,utility_success:false,model_calls:3,duration_ms:12,
@@ -36,4 +36,22 @@ test('source corrections are separated from final attack outcomes and normal err
   assert.equal(result.outcomes.normalCorrections,1);
   const withheld={...corrected,run:{...corrected.run,outcome_details:{grounding:{status:'withheld'}}}};
   assert.ok(matchesEvidence(withheld,'source-withheld'));
+});
+
+test('request and incomplete-run errors are readable without inventing details',()=>{
+  assert.equal(describeApiError({detail:[{msg:'Input is required'}]},422),'Input is required');
+  assert.equal(describeApiError({detail:[{msg:'Value error, choose a different input'}]},422),'choose a different input');
+  assert.equal(describeApiError({detail:'Run not found'},404),'Run not found');
+  assert.equal(describeApiError(null,503),'Request failed (HTTP 503).');
+  assert.match(describeRunFailure('error','provider_error'),/model provider failed/);
+  assert.match(describeRunFailure('budget-exhausted'),/limit was reached/);
+  assert.equal(describeRunFailure('completed'),null);
+});
+
+test('fact comparisons distinguish mismatches from missing evidence',()=>{
+  assert.deepEqual(factRows({expected:{team:'billing',severity:'normal'},facts:{team:'identity'},matches:{team:false}}),[
+    {field:'team',expected:'billing',actual:'identity',result:'Differs'},
+    {field:'severity',expected:'normal',actual:'Unavailable',result:'Unavailable'},
+  ]);
+  assert.deepEqual(factRows({facts:{team:'billing'}}),[]);
 });

@@ -7,7 +7,7 @@ import html
 import json
 from pathlib import Path
 
-from agents.cases import resolve_case
+from agents.cases import CASE_PATH, resolve_case
 from agents.email import DEFENSES
 from agents.scenarios import attack_input
 from lab.campaigns import RunSpec, execute
@@ -40,6 +40,7 @@ async def run(args) -> dict[str, object]:
         attack_channel=args.channel,
         partition=args.partition,
         variation=args.variation,
+        suite_variations="all" if getattr(args, "all_variations", False) else "selected",
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -64,8 +65,9 @@ async def run(args) -> dict[str, object]:
             "agents/cases.py",
             "agents/scenarios.py",
             "lab/campaigns.py",
-            "lab/corpus/workflows-v1.json",
+            CASE_PATH.relative_to(root).as_posix(),
             "packages/ifc/business.py",
+            "packages/ifc/grounding.py",
             "packages/gateway/providers.py",
         )
     }
@@ -125,6 +127,9 @@ if __name__ == "__main__":
     parser.add_argument("--channel", choices=("email", "record"), default="email")
     parser.add_argument("--partition", choices=("development", "heldout"), default="development")
     parser.add_argument("--variation", type=int, choices=range(5), default=0)
+    parser.add_argument(
+        "--all-variations", action="store_true", help="run all five suite variations"
+    )
     parser.add_argument("--max-turns", type=int, choices=range(1, 9), default=6)
     parser.add_argument("--email", type=Path)
     parser.add_argument("--output", type=Path, default=Path("artifacts/model-agent.json"))

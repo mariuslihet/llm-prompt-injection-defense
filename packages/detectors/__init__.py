@@ -23,6 +23,12 @@ PATTERNS = (
     (r"(MECHA_FIXTURE:|\$PRIVATE|\$SYSTEM)", "fixture-instruction"),
     (r"(base64|B64\[|1gn0r3)", "encoding"),
     (r"(display\s*:\s*none|visibility\s*:\s*hidden)", "hidden-content"),
+    (
+        r"\b(?:approv(?:e|ed|ing|al)\b.{0,60}\b(?:missing|without|no)\s+"
+        r"(?:manager\s+)?approval\b|(?:missing|without|no)\s+"
+        r"(?:manager\s+)?approval\b.{0,60}\bapprov(?:e|ed|ing|al)\b)",
+        "approval-bypass",
+    ),
 )
 
 
@@ -37,7 +43,12 @@ def detect(
         if re.search(pattern, normalized, re.IGNORECASE | re.DOTALL)
     )
     score = min(1.0, 0.65 * len(reasons))
-    return Detection(score, reasons, mode if score >= threshold else "allow")
+    action = mode if score >= threshold else "allow"
+    # This narrow lexical indicator alone has a measured quotation false positive.
+    # Request review instead of blocking unless a separate signal corroborates it.
+    if action == "block" and reasons == ("approval-bypass",):
+        action = "flag"
+    return Detection(score, reasons, action)
 
 
 class LocalClassifier:
